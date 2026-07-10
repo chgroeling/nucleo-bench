@@ -17,7 +17,7 @@ CFLAGS  += -nostartfiles
 CFLAGS  += -O0 -g3 -Wall -Wextra
 CFLAGS  += -Isrc
 
-LDFLAGS  = -T linker/stm32f411re.ld
+LDFLAGS  = -T linker/stm32f446re.ld
 LDFLAGS += -Wl,-Map=$(TARGET).map,--cref
 
 .PHONY: all flash debug clean

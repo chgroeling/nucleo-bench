@@ -154,16 +154,16 @@ sudo ldconfig
 st-info --probe
 ```
 
-Expected output (example for STM32F411 Nucleo):
+Expected output (example for STM32F446 Nucleo):
 
 ```
 Found 1 stlink programmers
-  version:    V2J27S6
-  serial:     55FF6B068683575549200767
-  flash:      524288 (pagesize: 16384)
+  version:    V2J27S15
+  serial:     066EFF485550755187251425
+  flash:      524288 (pagesize: 131072)
   sram:       131072
-  chipid:     0x0431
-  descr:      stm32f411re
+  chipid:     0x421
+  dev-type:   STM32F446
 ```
 
 #### Key commands
@@ -173,7 +173,7 @@ Found 1 stlink programmers
 | `st-info --probe`                         | Detect connected STM32 device  |
 | `st-flash write firmware.bin 0x8000000`   | Flash binary to MCU            |
 | `st-flash read dump.bin 0 0xFFFF`         | Read flash memory              |
-| `st-util`                                 | Start GDB server on :4242      |
+| `st-util --semihosting`                   | Start GDB server on :4242      |
 
 ---
 
