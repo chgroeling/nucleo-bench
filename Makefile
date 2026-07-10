@@ -43,12 +43,7 @@ flash: $(TARGET).bin
 	st-flash write $(TARGET).bin 0x08000000
 
 debug: $(TARGET).elf
-	gdb-multiarch -batch -q $(TARGET).elf \
-		-ex "target extended-remote :4242" \
-		-ex "load" \
-		-ex "monitor reset" \
-		-ex "echo === Check st-util terminal for output ===\n" \
-		-ex "continue"
+	gdb-multiarch -batch -q $(TARGET).elf -x debug.gdb
 
 clean:
 	rm -rf $(BUILD)
