@@ -11,6 +11,11 @@ void Default_Handler(void)
     while (1) {}
 }
 
+static void _exit_breakpoint(void)
+{
+    __asm volatile ("bkpt #0");
+}
+
 void NMI_Handler(void)                    __attribute__((weak, alias("Default_Handler")));
 void HardFault_Handler(void)              __attribute__((weak, alias("Default_Handler")));
 void MemManage_Handler(void)              __attribute__((weak, alias("Default_Handler")));
@@ -191,6 +196,7 @@ void Reset_Handler(void)
 
     main();
 
+    _exit_breakpoint();
     while (1) {}
 }
 
