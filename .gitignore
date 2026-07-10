@@ -1,0 +1,11 @@
+# Build output
+build/
+
+# Compiled objects and artifacts
+*.o
+*.elf
+*.bin
+*.map
+*.hex
+*.lst
+*.d
