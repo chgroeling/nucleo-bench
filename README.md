@@ -1,4 +1,4 @@
-# nucleo-eval
+# nucleo-bench
 
 A bare-metal benchmarking environment for STM32F446RE. I built this to
 measure compute time and code size of algorithms running directly on a
