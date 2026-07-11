@@ -35,7 +35,7 @@ static void _semihost_write_seconds(unsigned int cycles)
 static void algo_under_test(void)
 {
     /* TODO: replace with actual algorithm — this is test code */
-    for (int i = 0; i < 10000000; i++) {
+    for (int i = 0; i < 200000000; i++) {
         __asm volatile ("nop");
     }
 }
