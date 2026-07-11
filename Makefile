@@ -4,8 +4,8 @@ OBJCOPY  = arm-none-eabi-objcopy
 BUILD    = build
 TARGET   = $(BUILD)/firmware
 
-C_SRC    = src/main.c src/semihost.c src/startup.c
-OBJ      = $(BUILD)/src/main.o $(BUILD)/src/semihost.o $(BUILD)/src/startup.o
+C_SRC    = src/main.c src/semihost.c src/startup.c src/clock.c
+OBJ      = $(BUILD)/src/main.o $(BUILD)/src/semihost.o $(BUILD)/src/startup.o $(BUILD)/src/clock.o
 
 CFLAGS   = -mcpu=cortex-m4 -mthumb
 CFLAGS  += -mfpu=fpv4-sp-d16 -mfloat-abi=hard

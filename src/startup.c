@@ -1,5 +1,6 @@
 extern unsigned int _estack;
 extern int main(void);
+extern void _sysclk_180mhz(void);
 
 void Reset_Handler(void);
 
@@ -190,6 +191,8 @@ void Reset_Handler(void)
     while (dst < &_ebss) {
         *dst++ = 0;
     }
+
+    _sysclk_180mhz();
 
     main();
 

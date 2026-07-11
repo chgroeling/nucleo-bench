@@ -15,7 +15,7 @@ static void _semihost_write_uint(unsigned int val)
     _semihost_write_asm(p, (unsigned int)(end - p - 1));
 }
 
-#define CPU_FREQ 84000000
+#define CPU_FREQ 180000000
 
 static void _semihost_write_seconds(unsigned int cycles)
 {
