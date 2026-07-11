@@ -1,4 +1,4 @@
-/* ARM semihosting stubs (SYS_WRITE, SYS_CLOCK) and DWT cycle-counter helpers. */
+/* ARM semihosting stubs (SYS_WRITE, SYS_CLOCK). */
 
 #include <stdint.h>
 
@@ -31,21 +31,5 @@ unsigned int _semihost_clock(void)
         : "r0", "memory"
     );
     return cs;
-}
-
-#define DWT_CTRL   (*(volatile unsigned int *)0xE0001000)
-#define DWT_CYCCNT (*(volatile unsigned int *)0xE0001004)
-#define DEMCR      (*(volatile unsigned int *)0xE000EDFC)
-
-void _dwt_init(void)
-{
-    DEMCR |= 0x01000000;
-    DWT_CYCCNT = 0;
-    DWT_CTRL |= 1;
-}
-
-unsigned int _dwt_cyccnt(void)
-{
-    return DWT_CYCCNT;
 }
 

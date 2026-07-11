@@ -1,4 +1,5 @@
 /* System clock bring-up: HSI -> PLL -> 180 MHz with over-drive mode. */
+/* DWT cycle-counter helpers for benchmarking. */
 
 #include <stdint.h>
 
@@ -48,4 +49,25 @@ void _sysclk_180mhz(void)
     // 7. Switch System Clock Source over to the stable PLL
     RCC_CFGR = (RCC_CFGR & ~(3 << 0)) | (2 << 0); // SW = 10b (PLL)
     while ((RCC_CFGR & (3 << 2)) != (2 << 2));    // Wait for SWS to confirm PLL
+}
+
+#define DWT_CTRL   (*(volatile uint32_t *)0xE0001000)
+#define DWT_CYCCNT (*(volatile uint32_t *)0xE0001004)
+#define DEMCR      (*(volatile uint32_t *)0xE000EDFC)
+
+void _dwt_init(void)
+{
+    DEMCR |= 0x01000000;
+    DWT_CYCCNT = 0;
+    DWT_CTRL |= 1;
+}
+
+uint32_t _dwt_cyccnt(void)
+{
+    return DWT_CYCCNT;
+}
+
+void _dwt_zero(void)
+{
+    DWT_CYCCNT = 0;
 }
