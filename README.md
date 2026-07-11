@@ -44,6 +44,20 @@ sudo udevadm trigger
 
 Reconnect the board afterwards.
 
+## Project layout
+
+| Path                     | Purpose                                           |
+|--------------------------|---------------------------------------------------|
+| `src/main.cpp`           | Entry point, output helpers, `AlgoRunner`         |
+| `src/algo_nop.cpp/hpp`   | 1000‑nop throughput test (CPI validation)         |
+| `src/semihost.c`         | `_semihost_write0` — SYS_WRITE0 via `bkpt #0xAB` |
+| `src/clock.c`            | PLL config to 180 MHz, DWT cycle‑counter helpers   |
+| `src/startup.c`          | Vector table, `Reset_Handler`, C++ static init    |
+| `linker/stm32f446re.ld`  | Linker script (512K FLASH, 128K RAM)              |
+| `Makefile`               | Build, debug, release, run targets                |
+| `openocd.cfg`            | OpenOCD config (ST-LINK/V2-1, SWD, semihosting)   |
+| `debug.gdb`              | GDB batch script for semihosting sessions         |
+
 ## Usage
 
 ### Build
@@ -51,19 +65,33 @@ Reconnect the board afterwards.
 ```bash
 make clean        # remove build/
 make              # debug build (-O0) → build/firmware.bin, build/firmware.elf
+make debug        # same as make (explicit debug)
+make release      # optimized build (-O3)
 ```
 
-`make` prints the firmware size:
+`make` prints the size of the debug firmware:
 
 ```
    text    data     bss     dec     hex filename
-   4732       4       4    4740    1284 build/firmware.elf
+   4708       4       4    4716    126c build/firmware.elf
 ```
 
 - `text` — code + read‑only data (FLASH)
 - `data` — initialized read/write data (RAM, copied from FLASH at startup)
 - `bss`  — zero‑initialized read/write data (RAM, zeroed at startup)
 - `dec` / `hex` — total (text + data + bss) in decimal / hex
+
+The STM32F446RE has 512 KiB FLASH and 128 KiB RAM. To measure the code
+size of your algorithm, do a baseline build with an empty `algo()` body,
+note the `text` value, then restore your algorithm and build again. The
+difference in the `text` column is your algorithm's code footprint.
+Changes in `data` or `bss` reflect global/static variables your algorithm
+introduces.
+
+The build uses `-ffunction-sections -fdata-sections` and link‑time garbage
+collection (`--gc-sections`) so unreferenced code and data are stripped
+from the final binary — the measured footprint reflects only what your
+algorithm actually pulls in.
 
 ### Run & measure
 
@@ -117,7 +145,7 @@ that even -O3 cannot fully eliminate (3 M branches and increments).
 
 `src/algo_nop.cpp` is a test stub that lets you verify execution frequency
 (cycles-per-nop → effective CPI). To measure your own algorithm, add a new
-source file, update `src/main.cpp` to call it, and adjust `g_runner(N)` for
+source file, update `src/main.cpp` to call it, and adjust `kBenchRuns` for
 the desired repetition count. No need to touch `algo_nop.cpp`.
 
 Zero dependencies beyond nano stdlib — everything else is bare metal.

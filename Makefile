@@ -16,17 +16,24 @@ OBJ      = $(patsubst src/%.c,$(BUILD)/src/%.o,$(C_SRC)) \
 ARCH     = -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard
 SPECS    = -specs=nano.specs -specs=nosys.specs
 OPT      ?= -O0
-SHARED   = $(ARCH) $(SPECS) -nostartfiles $(OPT) -g3 -Wall -Wextra -Isrc
+SHARED   = $(ARCH) $(SPECS) -nostartfiles $(OPT) -g3 -Wall -Wextra -Isrc \
+           -ffunction-sections -fdata-sections
 
 CFLAGS   = $(SHARED) -std=c11
 CXXFLAGS = $(SHARED) -std=c++17 -fno-exceptions -fno-rtti
 
 LDFLAGS  = -T linker/stm32f446re.ld
-LDFLAGS += -Wl,-Map=$(TARGET).map,--cref
+LDFLAGS += -Wl,-Map=$(TARGET).map,--cref,--gc-sections
 
-.PHONY: all run_debug run_release clean
+.PHONY: all debug release run_debug run_release clean
 
 all: $(TARGET).bin
+
+debug:
+	$(MAKE) OPT=-O0
+
+release:
+	$(MAKE) OPT=-O3
 
 $(BUILD)/src:
 	mkdir -p $@
