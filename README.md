@@ -49,8 +49,8 @@ Reconnect the board afterwards.
 ### Build
 
 ```bash
-make              # debug build (-O0) → build/firmware.bin, build/firmware.elf
 make clean        # remove build/
+make              # debug build (-O0) → build/firmware.bin, build/firmware.elf
 ```
 
 `make` prints the firmware size:
