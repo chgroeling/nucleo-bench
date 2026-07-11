@@ -1,15 +1,15 @@
 set confirm off
-target extended-remote :4242
+target extended-remote :3333
 load
-monitor reset
+monitor reset halt
 
 break _exit_breakpoint
 commands
     echo \n=== Program exited (breakpoint hit) ===\n
-    monitor reset
+    monitor reset halt
     kill
     quit
 end
 
-echo === Check st-util terminal for output ===\n
+echo === Check openocd terminal for output ===\n
 continue

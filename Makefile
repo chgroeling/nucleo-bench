@@ -1,7 +1,5 @@
 CC       = arm-none-eabi-gcc
-AS       = arm-none-eabi-gcc
 OBJCOPY  = arm-none-eabi-objcopy
-OBJDUMP  = arm-none-eabi-objdump
 
 BUILD    = build
 TARGET   = $(BUILD)/firmware
@@ -35,11 +33,11 @@ $(TARGET).elf: $(OBJ)
 $(TARGET).bin: $(TARGET).elf
 	$(OBJCOPY) -O binary $< $@
 
-flash: $(TARGET).bin
-	st-flash write $(TARGET).bin 0x08000000
+flash: $(TARGET).elf
+	openocd -d1 -f openocd.cfg -c "program $< verify reset exit"
 
 debug: $(TARGET).elf
-	LANG=C gdb-multiarch -batch -q $(TARGET).elf -x debug.gdb
+	LANG=C gdb-multiarch -batch -q $< -x debug.gdb
 
 clean:
 	rm -rf $(BUILD)

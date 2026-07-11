@@ -9,16 +9,17 @@ This project outputs "Hello, World!" from an STM32 Nucleo board (F4 series,
 STM32F446RE) using ARM semihosting over the ST-LINK/V2-1 debug interface.
 There is no C runtime startup, no HAL and no libc I/O — everything is bare metal:
 a hand-written vector table, a minimal `Reset_Handler`, and assembly semihosting
-stubs. Output is captured by `st-util` / GDB, not a UART.
+stubs. Output is captured by OpenOCD / GDB, not a UART.
 
 ## Project layout
 
 | Path                     | Purpose                                                        |
 |--------------------------|---------------------------------------------------------------|
 | `src/main.c`             | Vector table, `Reset_Handler`, `main()`, exit breakpoint       |
-| `src/semihost.c`         | Semihosting stubs (`_semihost_write_asm`)                               |
+| `src/semihost.c`         | Semihosting stubs (`_semihost_write_asm`)                      |
 | `linker/stm32f446re.ld`  | Linker script (512K FLASH @ 0x08000000, 128K RAM @ 0x20000000) |
 | `Makefile`               | Build, flash and debug targets                                 |
+| `openocd.cfg`            | OpenOCD config (ST-LINK/V2-1, STM32F4, semihosting)            |
 | `debug.gdb`              | GDB batch script used by `make debug`                          |
 | `build/`                 | Build output (git-ignored)                                     |
 
@@ -35,7 +36,7 @@ stubs. Output is captured by `st-util` / GDB, not a UART.
 ## Toolchain
 
 - `arm-none-eabi-gcc` / `objcopy` (Cortex-M4, hard float `fpv4-sp-d16`)
-- `st-flash`, `st-util` (stlink-tools)
+- `openocd` (debug server, flash programming, semihosting)
 - `gdb-multiarch`
 
 ## Usage
@@ -67,13 +68,13 @@ make clean      # removes build/
 
 ### 3) Flash
 ```bash
-make flash      # st-flash write build/firmware.bin 0x08000000
+make flash      # openocd: erase, program, verify, reset
 ```
 
 ### 4) Debug / run with semihosting output
-Start the GDB server in one terminal:
+Start the OpenOCD server in one terminal:
 ```bash
-st-util --semihosting    # listens on :4242, forwards semihosting output
+openocd -d1 -f openocd.cfg    # GDB port :3333, semihosting output printed here
 ```
 
 Then in another terminal:
@@ -82,7 +83,8 @@ make debug
 ```
 
 `make debug` runs `gdb-multiarch -batch -q build/firmware.elf -x debug.gdb`,
-which loads the firmware, resets, and continues. Semihosting output appears in
-the `st-util` terminal. When `main()` returns, the `_exit_breakpoint` breakpoint
-is hit; the GDB script prints an exit message, resets the target and quits
-cleanly (batch mode auto-confirms prompts via `set confirm off`).
+which connects to OpenOCD, loads the firmware, resets, and continues.
+Semihosting output appears in the `openocd` terminal. When `main()` returns,
+the `_exit_breakpoint` breakpoint is hit; the GDB script prints an exit
+message, resets the target and quits cleanly (batch mode auto-confirms
+prompts via `set confirm off`).
