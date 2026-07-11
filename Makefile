@@ -1,4 +1,4 @@
-# Build, flash and debug targets for STM32F446RE Nucleo bare-metal firmware.
+# Build and run targets for STM32F446RE Nucleo bare-metal firmware.
 
 CC       = arm-none-eabi-gcc
 CXX      = arm-none-eabi-g++
@@ -23,7 +23,7 @@ CXXFLAGS = $(SHARED) -std=c++17 -fno-exceptions -fno-rtti
 LDFLAGS  = -T linker/stm32f446re.ld
 LDFLAGS += -Wl,-Map=$(TARGET).map,--cref
 
-.PHONY: all flash run_debug run_release clean
+.PHONY: all run_debug run_release clean
 
 all: $(TARGET).bin
 
@@ -41,9 +41,6 @@ $(TARGET).elf: $(OBJ)
 
 $(TARGET).bin: $(TARGET).elf
 	$(OBJCOPY) -O binary $< $@
-
-flash: $(TARGET).elf
-	openocd -d1 -f openocd.cfg -c "program $< verify reset exit"
 
 run_debug:
 	$(MAKE) OPT=-O0

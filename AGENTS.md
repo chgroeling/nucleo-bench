@@ -66,12 +66,7 @@ make            # builds build/firmware.bin
 make clean      # removes build/
 ```
 
-### 3) Flash
-```bash
-make flash      # openocd: erase, program, verify, reset
-```
-
-### 4) Debug / run with semihosting output
+### 3) Run with semihosting output
 Start the OpenOCD server in one terminal:
 ```bash
 openocd -d1 -f openocd.cfg    # GDB port :3333, semihosting output printed here
