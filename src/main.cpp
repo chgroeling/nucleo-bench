@@ -24,7 +24,7 @@ static void _semihost_write_uint(uint32_t val)
     do {
         *--p = '0' + (val % 10);
         val /= 10;
-    } while (val > 0);
+    } while (val > 0U);
     _semihost_write0(p);
 }
 
@@ -32,7 +32,7 @@ static void _semihost_write_uint(uint32_t val)
 static void _semihost_write_avg_ns(uint64_t total_cycles, uint32_t runs)
 {
     uint64_t divisor{(uint64_t)runs * kCpuFreq};
-    uint64_t ns{(total_cycles * 1000000000ULL + divisor / 2) / divisor};
+    uint64_t ns{(total_cycles * 1000000000ULL + divisor / 2U) / divisor};
     _semihost_write_uint((uint32_t)ns);
     _semihost_write0(" ns");
 }
@@ -42,13 +42,13 @@ static void _semihost_write_seconds(uint64_t cycles)
 {
     uint64_t sec{cycles / kCpuFreq};
     uint64_t frac{cycles % kCpuFreq};
-    uint32_t ms{(uint32_t)((frac * 1000 + kCpuFreq / 2) / kCpuFreq)};
+    uint32_t ms{(uint32_t)((frac * 1000U + kCpuFreq / 2U) / kCpuFreq)};
 
     _semihost_write_uint((uint32_t)sec);
     _semihost_write0(".");
 
-    if (ms < 100) _semihost_write0("0");
-    if (ms < 10)  _semihost_write0("0");
+    if (ms < 100U) _semihost_write0("0");
+    if (ms < 10U)  _semihost_write0("0");
     _semihost_write_uint(ms);
     _semihost_write0(" s");
 }
@@ -65,7 +65,7 @@ public:
     uint32_t runs(void) const { return m_runs; }
     void run(void)
     {
-        for (uint32_t r{0}; r < m_runs; r++) {
+        for (uint32_t r{0U}; r < m_runs; r++) {
             algo();
         }
     }
