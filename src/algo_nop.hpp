@@ -1,4 +1,4 @@
-/* 1000-nop test algorithm — replace with real algorithm. */
+/* 1000‑nop throughput test — see algo_nop.cpp for rationale. */
 
 #pragma once
 

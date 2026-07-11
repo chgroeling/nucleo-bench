@@ -18,9 +18,9 @@ stubs. Output is captured by OpenOCD / GDB, not a UART.
 | `src/main.c`             | Vector table, `Reset_Handler`, `main()`, exit breakpoint       |
 | `src/semihost.c`         | Semihosting stubs (`_semihost_write_asm`)                      |
 | `linker/stm32f446re.ld`  | Linker script (512K FLASH @ 0x08000000, 128K RAM @ 0x20000000) |
-| `Makefile`               | Build, flash and debug targets                                 |
+| `Makefile`               | Build, flash and run targets                                   |
 | `openocd.cfg`            | OpenOCD config (ST-LINK/V2-1, STM32F4, semihosting)            |
-| `debug.gdb`              | GDB batch script used by `make debug`                          |
+| `debug.gdb`              | GDB batch script used by `make run_debug`                      |
 | `build/`                 | Build output (git-ignored)                                     |
 
 ## How it works
@@ -79,10 +79,10 @@ openocd -d1 -f openocd.cfg    # GDB port :3333, semihosting output printed here
 
 Then in another terminal:
 ```bash
-make debug
+make run_debug
 ```
 
-`make debug` runs `gdb-multiarch -batch -q build/firmware.elf -x debug.gdb`,
+`make run_debug` and `make run_release` run `gdb-multiarch -batch -q build/firmware.elf -x debug.gdb`,
 which connects to OpenOCD, loads the firmware, resets, and continues.
 Semihosting output appears in the `openocd` terminal. When `main()` returns,
 the `_exit_breakpoint` breakpoint is hit; the GDB script prints an exit

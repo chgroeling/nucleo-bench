@@ -14,7 +14,8 @@ OBJ      = $(patsubst src/%.c,$(BUILD)/src/%.o,$(C_SRC)) \
 
 ARCH     = -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard
 SPECS    = -specs=nano.specs -specs=nosys.specs
-SHARED   = $(ARCH) $(SPECS) -nostartfiles -O0 -g3 -Wall -Wextra -Isrc
+OPT      ?= -O0
+SHARED   = $(ARCH) $(SPECS) -nostartfiles $(OPT) -g3 -Wall -Wextra -Isrc
 
 CFLAGS   = $(SHARED) -std=c11
 CXXFLAGS = $(SHARED) -std=c++17 -fno-exceptions -fno-rtti
@@ -22,7 +23,7 @@ CXXFLAGS = $(SHARED) -std=c++17 -fno-exceptions -fno-rtti
 LDFLAGS  = -T linker/stm32f446re.ld
 LDFLAGS += -Wl,-Map=$(TARGET).map,--cref
 
-.PHONY: all flash debug clean
+.PHONY: all flash run_debug run_release clean
 
 all: $(TARGET).bin
 
@@ -44,8 +45,13 @@ $(TARGET).bin: $(TARGET).elf
 flash: $(TARGET).elf
 	openocd -d1 -f openocd.cfg -c "program $< verify reset exit"
 
-debug: $(TARGET).elf
-	LANG=C gdb-multiarch -batch -q $< -x debug.gdb
+run_debug:
+	$(MAKE) OPT=-O0
+	LANG=C gdb-multiarch -batch -q $(TARGET).elf -x debug.gdb
+
+run_release:
+	$(MAKE) OPT=-O3
+	LANG=C gdb-multiarch -batch -q $(TARGET).elf -x debug.gdb
 
 clean:
 	rm -rf $(BUILD)

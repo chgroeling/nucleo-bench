@@ -1,33 +1,40 @@
 # nucleo-eval
 
-Bare-metal Hello World on STM32 Nucleo-F446RE with ARM semihosting over
-ST-LINK/V2-1. No C runtime, no HAL, no libc I/O.
+A bare-metal benchmarking environment for STM32F446RE. I built this to
+measure compute time and code size of algorithms running directly on a
+Cortex-M4F — no OS, no HAL, no hidden overhead. If you need cycle-accurate
+timings of small embedded routines, this should save you the setup work.
+
+Output goes over ARM semihosting through the on-board ST-LINK/V2-1. You
+read the numbers in an OpenOCD terminal — no UART wiring required.
+
+## Hardware
+
+| What                | Which                           |
+|---------------------|---------------------------------|
+| Board               | STM32 Nucleo-64 (NUCLEO-F446RE) |
+| MCU                 | STM32F446RE (Cortex-M4F)        |
+| Max clock           | 180 MHz via HSI-PLL             |
+| Debug probe         | ST-LINK/V2-1 (on-board)         |
+| USB ID              | `0483:374b`                     |
+| Flash / RAM         | 512 KiB / 128 KiB               |
+
+Connect the board via USB. Verify with:
+
+```bash
+lsusb | grep STMicro
+# → Bus 002 Device 017: ID 0483:374b STMicroelectronics ST-LINK/V2.1
+```
 
 ## Prerequisites
 
-### Debian / Ubuntu
-```bash
-sudo apt install gcc-arm-none-eabi openocd gdb-multiarch
-```
+- `arm-none-eabi-gcc` / `arm-none-eabi-g++` (Cortex-M4, hard-float ABI)
+- `openocd` (debug server, flash programming)
+- `gdb-multiarch`
 
-### Arch Linux
-```bash
-sudo pacman -S arm-none-eabi-gcc openocd arm-none-eabi-gdb
-```
-
-### Fedora
-```bash
-sudo dnf install arm-none-eabi-gcc-cs openocd gdb
-```
-
-### openSUSE
-```bash
-sudo zypper install cross-arm-none-gcc14 openocd gdb
-```
+Install with your distribution's package manager.
 
 ### udev rules (Linux)
-
-The ST-LINK debugger needs permission to access USB. Create a udev rule:
 
 ```bash
 echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="0483", MODE="0666"' | sudo tee /etc/udev/rules.d/99-stlink.rules
@@ -35,23 +42,15 @@ sudo udevadm control --reload-rules
 sudo udevadm trigger
 ```
 
-Reconnect the board after adding the rule.
+Reconnect the board afterwards.
 
 ## Usage
-
-### Check board connection
-
-```bash
-lsusb | grep STMicro
-```
-
-Expected: `ID 0483:374b STMicroelectronics ST-LINK/V2.1`
 
 ### Build
 
 ```bash
-make            # builds build/firmware.bin and build/firmware.elf
-make clean      # removes build/
+make              # debug build (-O0) → build/firmware.bin, build/firmware.elf
+make clean        # remove build/
 ```
 
 ### Flash
@@ -62,23 +61,59 @@ make flash
 
 Uses OpenOCD to erase, program, verify and reset the target.
 
-### Debug with semihosting output
+### Run & measure
 
-**Terminal 1** — start the OpenOCD debug server:
 ```bash
-openocd -d1 -f openocd.cfg
+make run_debug       # build -O0, flash and run
+make run_release     # build -O3, flash and run
 ```
 
-OpenOCD listens on GDB port `:3333`. Semihosting output appears in this
-terminal. The `-d1` flag suppresses cosmetic `Info:` noise from the ST-LINK
-driver.
+**Terminal 1** — OpenOCD server (semihosting output lands here):
 
-**Terminal 2** — build, load and run:
 ```bash
-make debug
+openocd -d1 -f openocd.cfg    # GDB on :3333, -d1 suppresses driver noise
 ```
 
-Connects GDB to OpenOCD, loads the firmware, resets the target and runs it.
-Output `"Hello, World!"` appears in the OpenOCD terminal. When `main()`
-returns, the breakpoint at `_exit_breakpoint` is hit, the target is reset,
-and GDB exits cleanly.
+**Terminal 2** — build, flash and run in one step:
+
+```bash
+make run_debug       # or: make run_release
+```
+
+Connects GDB, flashes, resets and runs. Benchmark output prints in the
+OpenOCD terminal. When `main()` returns a breakpoint at `_exit_breakpoint`
+catches the exit, the target is reset and GDB quits.
+
+Example output for the 1000‑nop throughput test (3 000 000 runs):
+
+```
+=== make run_debug (-O0 -g3) ===
+--- start ---
+wrap 23.861 s
+runs 3000000
+dt = 17.567 s  avg = 5856 ns
+
+=== make run_release (-O3 -g3) ===
+--- start ---
+wrap 23.861 s
+runs 3000000
+dt = 16.853 s  avg = 5618 ns
+```
+
+At -O3 the effective frequency is 3 000 000 000 nops / 16.853 s ≈ 178 MHz —
+close to the 180 MHz core clock. The remaining gap is loop-counter overhead
+that even -O3 cannot fully eliminate (3 M branches and increments).
+
+- `wrap` — DWT cycle counter wraparound limit (2³² cycles at 180 MHz)
+- `runs` — repetition count (`g_runner(N)`)
+- `dt` — total elapsed time
+- `avg` — per-run average in nanoseconds
+
+## Bring your own algorithm
+
+`src/algo_nop.cpp` is a test stub that lets you verify execution frequency
+(cycles-per-nop → effective CPI). To measure your own algorithm, add a new
+source file, update `src/main.cpp` to call it, and adjust `g_runner(N)` for
+the desired repetition count. No need to touch `algo_nop.cpp`.
+
+Zero dependencies beyond nano stdlib — everything else is bare metal.
