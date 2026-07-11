@@ -1,3 +1,5 @@
+/* Vector table, Reset_Handler, data/bss init, weak ISR aliases. */
+
 extern unsigned int _estack;
 extern int main(void);
 extern void _sysclk_180mhz(void);

@@ -1,3 +1,5 @@
+/* ARM semihosting stubs (SYS_WRITE, SYS_CLOCK) and DWT cycle-counter helpers. */
+
 #include <stdint.h>
 
 void _semihost_write_asm(const char *buf, unsigned int len)

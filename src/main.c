@@ -1,3 +1,5 @@
+/* Application entry: semihosting output helpers and DWT-based benchmark loop. */
+
 extern void _semihost_write_asm(const char *buf, unsigned int len);
 extern void _dwt_init(void);
 extern unsigned int _dwt_cyccnt(void);

@@ -1,3 +1,5 @@
+# Build, flash and debug targets for STM32F446RE Nucleo bare-metal firmware.
+
 CC       = arm-none-eabi-gcc
 OBJCOPY  = arm-none-eabi-objcopy
 
