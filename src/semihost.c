@@ -1,20 +1,13 @@
-/* ARM semihosting stubs (SYS_WRITE). */
+/* ARM semihosting stub (SYS_WRITE0). */
 
-#include <stdint.h>
-
-void _semihost_write_asm(const char *buf, unsigned int len)
+void _semihost_write0(const char *s)
 {
-    uintptr_t block[3];
-    block[0] = 1;
-    block[1] = (uintptr_t)buf;
-    block[2] = len;
-
     __asm volatile (
-        "mov r0, #5\n\t"
-        "mov r1, %[blk]\n\t"
+        "mov r0, #4\n\t"
+        "mov r1, %[str]\n\t"
         "bkpt #0xAB"
         :
-        : [blk] "r" (block)
+        : [str] "r" (s)
         : "r0", "r1", "memory"
     );
 }
