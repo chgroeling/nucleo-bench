@@ -53,6 +53,18 @@ make              # debug build (-O0) → build/firmware.bin, build/firmware.elf
 make clean        # remove build/
 ```
 
+`make` prints the firmware size:
+
+```
+   text    data     bss     dec     hex filename
+   4732       4       4    4740    1284 build/firmware.elf
+```
+
+- `text` — code + read‑only data (FLASH)
+- `data` — initialized read/write data (RAM, copied from FLASH at startup)
+- `bss`  — zero‑initialized read/write data (RAM, zeroed at startup)
+- `dec` / `hex` — total (text + data + bss) in decimal / hex
+
 ### Run & measure
 
 ```bash

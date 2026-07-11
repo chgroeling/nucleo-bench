@@ -3,6 +3,7 @@
 CC       = arm-none-eabi-gcc
 CXX      = arm-none-eabi-g++
 OBJCOPY  = arm-none-eabi-objcopy
+SIZE     = arm-none-eabi-size
 
 BUILD    = build
 TARGET   = $(BUILD)/firmware
@@ -41,6 +42,7 @@ $(TARGET).elf: $(OBJ)
 
 $(TARGET).bin: $(TARGET).elf
 	$(OBJCOPY) -O binary $< $@
+	$(SIZE) $<
 
 run_debug:
 	$(MAKE) OPT=-O0
