@@ -1,4 +1,4 @@
-/* ARM semihosting stubs (SYS_WRITE, SYS_CLOCK). */
+/* ARM semihosting stubs (SYS_WRITE). */
 
 #include <stdint.h>
 
@@ -17,19 +17,5 @@ void _semihost_write_asm(const char *buf, unsigned int len)
         : [blk] "r" (block)
         : "r0", "r1", "memory"
     );
-}
-
-unsigned int _semihost_clock(void)
-{
-    unsigned int cs;
-    __asm volatile (
-        "mov r0, #0x10\n\t"
-        "bkpt #0xAB\n\t"
-        "mov %0, r0"
-        : "=r" (cs)
-        :
-        : "r0", "memory"
-    );
-    return cs;
 }
 
