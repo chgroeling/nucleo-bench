@@ -4,6 +4,12 @@ extern unsigned int _estack;
 extern int main(void);
 extern void _sysclk_180mhz(void);
 
+typedef void (*init_fn)(void);
+extern init_fn __preinit_array_start;
+extern init_fn __preinit_array_end;
+extern init_fn __init_array_start;
+extern init_fn __init_array_end;
+
 void Reset_Handler(void);
 
 void Default_Handler(void)
@@ -195,6 +201,14 @@ void Reset_Handler(void)
     }
 
     _sysclk_180mhz();
+
+    {
+        init_fn *p;
+        for (p = &__preinit_array_start; p < &__preinit_array_end; p++)
+            (*p)();
+        for (p = &__init_array_start; p < &__init_array_end; p++)
+            (*p)();
+    }
 
     main();
 

@@ -1,8 +1,10 @@
 /* Application entry: semihosting output helpers and DWT-based benchmark loop. */
 
-extern void _semihost_write_asm(const char *buf, unsigned int len);
-extern void _dwt_init(void);
-extern unsigned int _dwt_cyccnt(void);
+extern "C" {
+void _semihost_write_asm(const char *buf, unsigned int len);
+void _dwt_init(void);
+unsigned int _dwt_cyccnt(void);
+}
 
 static void _semihost_write_uint(unsigned int val)
 {
@@ -34,13 +36,16 @@ static void _semihost_write_seconds(unsigned int cycles)
     _semihost_write_asm(" s", 2);
 }
 
-static void algo_under_test(void)
-{
-    /* TODO: replace with actual algorithm — this is test code */
-    for (int i = 0; i < 200000000; i++) {
-        __asm volatile ("nop");
+static class AlgoRunner {
+public:
+    AlgoRunner() {}
+    void run(void)
+    {
+        for (int i = 0; i < 200000000; i++) {
+            __asm volatile ("nop");
+        }
     }
-}
+} g_runner;
 
 int main(void)
 {
@@ -51,7 +56,7 @@ int main(void)
     _dwt_init();
     t0 = _dwt_cyccnt();
 
-    algo_under_test();
+    g_runner.run();
 
     t1 = _dwt_cyccnt();
 
