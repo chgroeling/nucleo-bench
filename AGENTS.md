@@ -16,7 +16,7 @@ stubs. Output is captured by `st-util` / GDB, not a UART.
 | Path                     | Purpose                                                        |
 |--------------------------|---------------------------------------------------------------|
 | `src/main.c`             | Vector table, `Reset_Handler`, `main()`, exit breakpoint       |
-| `src/semihost.s`         | Assembly semihosting stubs (`_semihost_write_asm`, `_semihost_exit_asm`) |
+| `src/semihost.c`         | Semihosting stubs (`_semihost_write_asm`)                               |
 | `linker/stm32f446re.ld`  | Linker script (512K FLASH @ 0x08000000, 128K RAM @ 0x20000000) |
 | `Makefile`               | Build, flash and debug targets                                 |
 | `debug.gdb`              | GDB batch script used by `make debug`                          |

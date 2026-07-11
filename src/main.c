@@ -1,5 +1,4 @@
 extern void _semihost_write_asm(const char *buf, unsigned int len);
-extern void _semihost_exit_asm(int code);
 
 extern unsigned int _estack;
 

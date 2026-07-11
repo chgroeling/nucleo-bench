@@ -6,8 +6,7 @@ OBJDUMP  = arm-none-eabi-objdump
 BUILD    = build
 TARGET   = $(BUILD)/firmware
 
-C_SRC    = src/main.c
-ASM_SRC  = src/semihost.s
+C_SRC    = src/main.c src/semihost.c
 OBJ      = $(BUILD)/src/main.o $(BUILD)/src/semihost.o
 
 CFLAGS   = -mcpu=cortex-m4 -mthumb
@@ -27,11 +26,8 @@ all: $(TARGET).bin
 $(BUILD)/src:
 	mkdir -p $@
 
-$(BUILD)/src/main.o: $(C_SRC) | $(BUILD)/src
+$(BUILD)/src/%.o: src/%.c | $(BUILD)/src
 	$(CC) $(CFLAGS) -c -o $@ $<
-
-$(BUILD)/src/semihost.o: $(ASM_SRC) | $(BUILD)/src
-	$(AS) $(CFLAGS) -c -o $@ $<
 
 $(TARGET).elf: $(OBJ)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJ)
@@ -43,7 +39,7 @@ flash: $(TARGET).bin
 	st-flash write $(TARGET).bin 0x08000000
 
 debug: $(TARGET).elf
-	gdb-multiarch -batch -q $(TARGET).elf -x debug.gdb
+	LANG=C gdb-multiarch -batch -q $(TARGET).elf -x debug.gdb
 
 clean:
 	rm -rf $(BUILD)
