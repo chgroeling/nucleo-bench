@@ -1,8 +1,43 @@
 /* Vector table, Reset_Handler, data/bss init, weak ISR aliases. */
 
+#include <stddef.h>
+
 extern unsigned int _estack;
 extern int main(void);
 extern void _sysclk_180mhz(void);
+
+/* Hand-rolled copy / fill for startup.
+
+   These are deliberately NOT named memcpy / memset. At -O3 GCC's loop-idiom
+   pass rewrites the .data copy and .bss zero loops in Reset_Handler into calls
+   to memcpy / memset, which the linker then satisfies from newlib-nano (libc),
+   dragging C-library objects into an otherwise libc-free image. By giving our
+   own routines private names and calling them explicitly, startup pulls in no
+   libc at all. The standard memcpy / memset symbols are only ever linked (from
+   libc) if the user's own algorithm actually references them — so the C library
+   stays out unless you opt into it.
+
+   The `no-tree-loop-distribute-patterns` attribute is essential: without it,
+   GCC would recognize the byte loop inside each function as a memcpy / memset
+   idiom and "optimize" it into a call to itself — infinite recursion. */
+__attribute__((optimize("no-tree-loop-distribute-patterns")))
+static void _memcpy(void *dst, const void *src, size_t n)
+{
+    unsigned char *d = (unsigned char *)dst;
+    const unsigned char *s = (const unsigned char *)src;
+    while (n--) {
+        *d++ = *s++;
+    }
+}
+
+__attribute__((optimize("no-tree-loop-distribute-patterns")))
+static void _memset(void *dst, int c, size_t n)
+{
+    unsigned char *d = (unsigned char *)dst;
+    while (n--) {
+        *d++ = (unsigned char)c;
+    }
+}
 
 typedef void (*init_fn)(void);
 extern init_fn __preinit_array_start;
@@ -188,17 +223,10 @@ void (* const isr_vector[98])(void) = {
 void Reset_Handler(void)
 {
     extern unsigned int _sidata, _sdata, _edata;
-    unsigned int *src = &_sidata;
-    unsigned int *dst = &_sdata;
-    while (dst < &_edata) {
-        *dst++ = *src++;
-    }
-
     extern unsigned int _sbss, _ebss;
-    dst = &_sbss;
-    while (dst < &_ebss) {
-        *dst++ = 0;
-    }
+
+    _memcpy(&_sdata, &_sidata, (size_t)((char *)&_edata - (char *)&_sdata));
+    _memset(&_sbss, 0, (size_t)((char *)&_ebss - (char *)&_sbss));
 
     _sysclk_180mhz();
 

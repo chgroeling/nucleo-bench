@@ -36,10 +36,10 @@ LDFLAGS += -Wl,-Map=$(TARGET).map,--cref,--gc-sections
 
 all: $(TARGET).bin
 
-debug:
+debug: clean
 	$(MAKE) OPT=-O0
 
-release:
+release: clean
 	$(MAKE) OPT=-O3
 
 $(BUILD)/src:
@@ -58,11 +58,11 @@ $(TARGET).bin: $(TARGET).elf
 	$(OBJCOPY) -O binary $< $@
 	$(SIZE) $<
 
-run_debug:
+run_debug: clean
 	$(MAKE) OPT=-O0
 	LANG=C gdb-multiarch -batch -q $(TARGET).elf -x debug.gdb
 
-run_release:
+run_release: clean
 	$(MAKE) OPT=-O3
 	LANG=C gdb-multiarch -batch -q $(TARGET).elf -x debug.gdb
 
