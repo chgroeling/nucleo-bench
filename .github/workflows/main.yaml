@@ -17,7 +17,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install arm-none-eabi toolchain
         uses: carlosperate/arm-none-eabi-gcc-action@v1
@@ -75,7 +75,7 @@ jobs:
           echo "Size check passed: ${flash_used} bytes fit in ${FLASH_BYTES} bytes of FLASH."
 
       - name: Upload firmware artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: firmware
           path: dist/
