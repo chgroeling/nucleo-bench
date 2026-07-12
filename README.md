@@ -49,7 +49,6 @@ Reconnect the board afterwards.
 ### Build
 
 ```bash
-make clean        # remove build/
 make release      # optimized build (-O3) → build/firmware.bin, build/firmware.elf
                   # (make / make debug build unoptimized -O0 for stepping)
 ```
@@ -65,9 +64,11 @@ with `TEST_ALGO=1`, which defines `USE_TEST_ALGO` and makes `algo()` call it:
 
 ```bash
 make release TEST_ALGO=1      # optimized build (-O3) including the nop example
-make run_release TEST_ALGO=1  # build -O3, flash and run the example
-                              # (make / run_debug do the same at -O0)
+                              # (make / make debug do the same at -O0)
 ```
+
+`TEST_ALGO=1` works the same way on the run targets — see
+[Run & measure](#run--measure).
 
 Every build prints the firmware size. Here is the empty baseline
 (`make release`, no algorithm selected):
@@ -189,12 +190,9 @@ stays at zero for algorithms that don't allocate.
 
 ### Run & measure
 
-Use `make run_release` for benchmarking — the `-O3` build reflects real
-algorithm performance:
-
-```bash
-make run_release     # build -O3, flash and run (use run_debug for -O0 stepping)
-```
+Benchmarking uses two terminals: one runs the OpenOCD server, the other builds,
+flashes and runs the firmware. Use the `-O3` `run_release` target — it reflects
+real algorithm performance (`run_debug` builds `-O0` for stepping).
 
 **Terminal 1** — OpenOCD server (semihosting output lands here):
 
@@ -205,7 +203,8 @@ openocd -d1 -f openocd.cfg    # GDB on :3333, -d1 suppresses driver noise
 **Terminal 2** — build, flash and run in one step:
 
 ```bash
-make run_release     # build -O3, flash and run (use run_debug for -O0 stepping)
+make run_release              # empty baseline
+make run_release TEST_ALGO=1  # include the bundled nop example
 ```
 
 Connects GDB, flashes, resets and runs. Benchmark output prints in the
@@ -226,7 +225,10 @@ At -O3 the effective frequency is 1000 nops / 5611 ns ≈ 178 MHz —
 close to the 180 MHz core clock. The remaining gap is loop-counter overhead
 that even -O3 cannot fully eliminate (3 M branches and increments).
 
-- `wrap` — DWT cycle counter wraparound limit (2**32 cycles at 180 MHz)
+- `wrap` — DWT cycle counter wraparound limit (2**32 cycles at 180 MHz). The
+  total measured time (`dt`) must **never** exceed this: the 32-bit cycle
+  counter silently wraps past it, making the reading wrong. Keep `kBenchRuns` ×
+  per-run time under `wrap`; if you approach it, lower `kBenchRuns`.
 - `runs` — repetition count (`g_runner(N)`)
 - `dt` — total elapsed time
 - `avg` — per-run average in nanoseconds
