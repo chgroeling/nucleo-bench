@@ -2,6 +2,7 @@
 
 [![build](https://github.com/chgroeling/nucleo-bench/actions/workflows/main.yaml/badge.svg)](https://github.com/chgroeling/nucleo-bench/actions/workflows/main.yaml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Changelog](https://img.shields.io/badge/changelog-Keep%20a%20Changelog-orange.svg)](CHANGELOG.md)
 
 A bare-metal benchmarking environment for STM32F446RE. I built this to
 measure compute time and code size of algorithms running directly on a

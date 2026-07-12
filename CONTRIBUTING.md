@@ -22,7 +22,10 @@ welcome and the process is deliberately lightweight.
    make release TEST_ALGO=1     # bundled nop example
    ```
    CI runs these same builds and reports the firmware size.
-4. Open the PR with a short description of *what* changed and *why*.
+4. Add an entry under the `## [Unreleased]` section of
+   [CHANGELOG.md](CHANGELOG.md), grouped under `Added` / `Changed` / `Fixed`
+   (etc.) as appropriate.
+5. Open the PR with a short description of *what* changed and *why*.
 
 ## Keeping the project honest
 
