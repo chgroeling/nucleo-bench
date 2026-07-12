@@ -251,10 +251,4 @@ has no effect and deleting it — here, the empty benchmark loop body. Without
 it, `-O3` would delete the entire `for` loop (dead-code elimination), so the
 DWT delta would read ~0 ns and the harness would look broken. Because it
 generates no code, it adds no cycles — the measured time then reflects the pure
-loop overhead (counter increment, compare, branch) alone. A `nop` would work
-too, but it costs one real cycle per iteration and would skew that baseline.
-
-Note the memory clobber is *not* used here: on the empty baseline it would only
-add spurious loop-counter reloads.
-
-Zero dependencies beyond nano stdlib — everything else is bare metal.
+loop overhead (counter increment, compare, branch) alone. 
