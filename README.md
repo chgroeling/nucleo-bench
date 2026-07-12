@@ -183,11 +183,13 @@ void algo(void)
 }
 ```
 
-`clobber_memory()` is a full memory-clobber fence (`asm volatile("" ::: "memory")`,
-the same idiom as the Linux kernel's `barrier()`). It forbids reordering
-loads/stores across the fence and prevents caching stale values in registers.
-Use it when the algorithm's result lives in a buffer rather than a return
-value:
+`clobber_memory()` tells the compiler: "assume every byte of memory may have
+just been read and written here." That single assumption has two effects — it
+must finish all pending writes before this point (so they can't be optimized
+away), and it must re-read any value it had kept in a register afterwards (since
+memory might have changed). In short, it forces all memory writes to really
+happen. Use it when the algorithm's result lives in a buffer rather than a
+return value:
 
 ```cpp
 #include "compiler.hpp"
@@ -197,13 +199,14 @@ static uint8_t buf[256];
 void algo(void)
 {
     fill_buffer(buf, sizeof(buf));   // writes into buf
-    clobber_memory();                // stores to buf must not be elided
+    clobber_memory();                // force those writes to actually happen
 }
 ```
 
-Without the fence, `-O3` may notice `buf` is never read afterwards and drop the
-stores (or the whole call). `clobber_memory()` makes the compiler treat all
-memory as observed, so the writes stay.
+Without it, `-O3` may notice `buf` is never read afterwards and drop the writes
+(or the whole call) as pointless. `clobber_memory()` makes the compiler treat
+that memory as observed, so the writes stay. It is the same one-line trick as
+the Linux kernel's `barrier()` (`asm volatile("" ::: "memory")`).
 
 ### The empty baseline
 
