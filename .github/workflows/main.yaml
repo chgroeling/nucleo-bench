@@ -1,0 +1,81 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build & size check
+    runs-on: ubuntu-latest
+
+    env:
+      FLASH_BYTES: 524288   # STM32F446RE FLASH = 512 KiB
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install arm-none-eabi toolchain
+        uses: carlosperate/arm-none-eabi-gcc-action@v1
+        with:
+          release: '13.2.Rel1'
+
+      - name: Show toolchain versions
+        run: |
+          arm-none-eabi-gcc --version | head -n1
+          arm-none-eabi-g++ --version | head -n1
+          make --version | head -n1
+
+      - name: Build empty baseline (make release)
+        run: make release
+
+      - name: Record baseline size
+        run: |
+          mkdir -p dist/baseline
+          cp build/firmware.elf build/firmware.bin build/firmware.map dist/baseline/
+          arm-none-eabi-size build/firmware.elf | tee baseline-size.txt
+
+      - name: Build nop example (make release TEST_ALGO=1)
+        run: make release TEST_ALGO=1
+
+      - name: Record TEST_ALGO size
+        run: |
+          mkdir -p dist/test_algo
+          cp build/firmware.elf build/firmware.bin build/firmware.map dist/test_algo/
+          arm-none-eabi-size build/firmware.elf | tee test-algo-size.txt
+
+      - name: Size check & summary
+        run: |
+          text=$(awk 'NR==2 {print $1}' baseline-size.txt)
+          data=$(awk 'NR==2 {print $2}' baseline-size.txt)
+          flash_used=$((text + data))
+          {
+            echo "## Firmware size report"
+            echo ""
+            echo "### Empty baseline (\`make release\`)"
+            echo '```'
+            cat baseline-size.txt
+            echo '```'
+            echo "FLASH used (text + data): ${flash_used} / ${FLASH_BYTES} bytes"
+            echo ""
+            echo "### With nop example (\`make release TEST_ALGO=1\`)"
+            echo '```'
+            cat test-algo-size.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$flash_used" -gt "$FLASH_BYTES" ]; then
+            echo "::error::FLASH overflow: ${flash_used} bytes exceeds ${FLASH_BYTES} bytes"
+            exit 1
+          fi
+          echo "Size check passed: ${flash_used} bytes fit in ${FLASH_BYTES} bytes of FLASH."
+
+      - name: Upload firmware artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: dist/

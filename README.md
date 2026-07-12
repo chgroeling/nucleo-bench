@@ -1,5 +1,8 @@
 # nucleo-bench
 
+[![build](https://github.com/chgroeling/nucleo-bench/actions/workflows/main.yaml/badge.svg)](https://github.com/chgroeling/nucleo-bench/actions/workflows/main.yaml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A bare-metal benchmarking environment for STM32F446RE. I built this to
 measure compute time and code size of algorithms running directly on a
 Cortex-M4F — no OS, no HAL, no hidden overhead. If you need cycle-accurate
@@ -300,4 +303,14 @@ has no effect and deleting it — here, the empty benchmark loop body. Without
 it, `-O3` would delete the entire `for` loop (dead-code elimination), so the
 DWT delta would read ~0 ns and the harness would look broken. Because it
 generates no code, it adds no cycles — the measured time then reflects the pure
-loop overhead (counter increment, compare, branch) alone. 
+loop overhead (counter increment, compare, branch) alone.
+
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the
+(lightweight) process. The one hard rule: keep the image freestanding — no new
+dependencies, no change to the empty baseline.
+
+## License
+
+Released under the [MIT License](LICENSE). © Christian Gröling.
