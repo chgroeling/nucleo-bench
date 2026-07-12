@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include "algo_nop.hpp"
+#include "compiler.hpp"
 
 static constexpr uint64_t kCpuFreq{180000000ULL};
 static constexpr uint32_t kBenchRuns{3000000U};
@@ -61,12 +62,14 @@ static class AlgoRunner {
 #ifdef USE_TEST_ALGO
         algo_nop();
 #else
-        /* No algorithm selected: an empty volatile asm is a compiler barrier
-           that the optimizer must preserve, so it cannot prove the loop body
-           empty and delete the whole `for` loop. Unlike a nop it emits *zero*
-           instructions, so it adds no cycles — the measured time then reflects
-           the pure loop overhead (counter increment, compare, branch) alone. */
-        __asm volatile("");
+        /* No algorithm selected: compiler_barrier() is a zero-instruction
+           compiler barrier (see compiler.hpp) so -O3 cannot prove the loop body
+           empty and delete the whole `for` loop. It adds no cycles, so the
+           measured time reflects the pure loop overhead alone.
+
+           For a real algorithm, call it here and guard its result with
+           do_not_optimize() / clobber_memory() so -O3 cannot discard it. */
+        compiler_barrier();
 #endif
     }
 public:

@@ -159,14 +159,66 @@ default; build with `make TEST_ALGO=1` to include it. To measure your own
 algorithm, add a new source file, update `src/main.cpp` to call it, and adjust
 `kBenchRuns` for the desired repetition count. No need to touch `algo_nop.cpp`.
 
-When no algorithm is selected, `algo()` contains a single empty
-`__asm volatile("")`. This is a compiler barrier: it emits **zero**
+### Keeping your algorithm alive under -O3
+
+If an algorithm's result is never observed, `-O3` deletes the computation as
+dead code, or hoists a loop-invariant call out of the loop — so you end up
+timing nothing. `compiler.hpp` provides three zero-overhead barriers; two of
+them, described here, keep your algorithm alive (the third, `compiler_barrier()`,
+is for the empty baseline — see [below](#the-empty-baseline)). All emit **zero**
+instructions — they only constrain the optimizer, so they don't distort the
+measured cycles.
+
+`do_not_optimize(value)` forces `value` into a register/memory as a side
+effect, so the code producing it cannot be discarded. Apply it to an
+algorithm's result (or a mutated input):
+
+```cpp
+#include "compiler.hpp"
+
+void algo(void)
+{
+    int result = my_algorithm(input);
+    do_not_optimize(result);   // result is "used" → computation is kept
+}
+```
+
+`clobber_memory()` is a full memory-clobber fence (`asm volatile("" ::: "memory")`,
+the same idiom as the Linux kernel's `barrier()`). It forbids reordering
+loads/stores across the fence and prevents caching stale values in registers.
+Use it when the algorithm's result lives in a buffer rather than a return
+value:
+
+```cpp
+#include "compiler.hpp"
+
+static uint8_t buf[256];
+
+void algo(void)
+{
+    fill_buffer(buf, sizeof(buf));   // writes into buf
+    clobber_memory();                // stores to buf must not be elided
+}
+```
+
+Without the fence, `-O3` may notice `buf` is never read afterwards and drop the
+stores (or the whole call). `clobber_memory()` makes the compiler treat all
+memory as observed, so the writes stay.
+
+### The empty baseline
+
+When no algorithm is selected, `algo()` calls `compiler_barrier()` from
+`compiler.hpp`, which wraps a single empty `__asm volatile("")`. It emits **zero**
 instructions, yet counts as an observable side effect the optimizer must
-preserve. Without it, `-O3` would prove the loop body empty and delete the
-entire benchmark `for` loop (dead-code elimination), so the DWT delta would
-read ~0 ns and the harness would look broken. Because it generates no code, it
-adds no cycles — the measured time then reflects the pure loop overhead
-(counter increment, compare, branch) alone. A `nop` would work too, but it
-costs one real cycle per iteration and would skew that baseline.
+preserve. Placing it in a code path stops the compiler from proving that path
+has no effect and deleting it — here, the empty benchmark loop body. Without
+it, `-O3` would delete the entire `for` loop (dead-code elimination), so the
+DWT delta would read ~0 ns and the harness would look broken. Because it
+generates no code, it adds no cycles — the measured time then reflects the pure
+loop overhead (counter increment, compare, branch) alone. A `nop` would work
+too, but it costs one real cycle per iteration and would skew that baseline.
+
+Note the memory clobber is *not* used here: on the empty baseline it would only
+add spurious loop-counter reloads.
 
 Zero dependencies beyond nano stdlib — everything else is bare metal.
