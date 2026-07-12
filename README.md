@@ -105,15 +105,48 @@ collection (`--gc-sections`) so unreferenced code and data are stripped
 from the final binary — the measured footprint reflects only what your
 algorithm actually pulls in.
 
+### No library dependencies
+
+The image is fully freestanding: it links **no** support library — not libc
+(newlib-nano), not libgcc. `nano.specs` puts newlib-nano on the linker search
+path, but nothing is actually pulled from it. Startup uses private
+`_memcpy` / `_memset` (so the compiler's loop-idiom pass doesn't drag in libc),
+and 64-bit division goes through a hand-written `udivmod64()` (so GCC doesn't
+call libgcc's `__aeabi_uldivmod`). Verify with `nm`:
+
+```console
+$ arm-none-eabi-nm -C -n build/firmware.elf   # (weak ISR aliases omitted)
+08000000 R isr_vector
+08000188 T _semihost_write0
+08000194 T Default_Handler
+08000198 t _memset.constprop.0
+080001b4 t _memcpy.constprop.0
+080001d8 T Reset_Handler
+08000240 T _sysclk_180mhz
+080002d0 T _dwt_init
+080002f4 T _dwt_cyccnt
+08000300 T _dwt_zero
+0800030c t _semihost_write_uint(unsigned long)
+0800034c t _semihost_write_seconds(unsigned long long)
+08000438 T main
+08000518 t _GLOBAL__sub_I_main
+...
+```
+
+Every symbol is defined in this repo; there are no undefined (externally
+provided) symbols. Because nothing is linked implicitly, the size delta you
+measure for an algorithm is honest end-to-end: if your code calls a libc
+function (say `memcpy` or `printf`), that function is linked from newlib-nano
+*then*, and its cost shows up in the `text` delta — you pay only for what you
+use, and you can see exactly what that is.
+
 ### Run & measure
 
 Use `make run_release` for benchmarking — the `-O3` build reflects real
-algorithm performance. `make run_debug` (`-O0`, unoptimized) is optional and
-mainly useful for stepping through code:
+algorithm performance:
 
 ```bash
-make run_release     # build -O3, flash and run (use this for measurements)
-make run_debug       # build -O0, flash and run (optional, for debugging)
+make run_release     # build -O3, flash and run (use run_debug for -O0 stepping)
 ```
 
 **Terminal 1** — OpenOCD server (semihosting output lands here):
@@ -125,7 +158,7 @@ openocd -d1 -f openocd.cfg    # GDB on :3333, -d1 suppresses driver noise
 **Terminal 2** — build, flash and run in one step:
 
 ```bash
-make run_release     # or, for debugging: make run_debug
+make run_release     # build -O3, flash and run (use run_debug for -O0 stepping)
 ```
 
 Connects GDB, flashes, resets and runs. Benchmark output prints in the

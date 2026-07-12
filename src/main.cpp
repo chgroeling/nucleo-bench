@@ -15,6 +15,34 @@ uint32_t _dwt_cyccnt(void);
 }
 
 
+/* Software 64-bit unsigned divide + modulo.
+
+   The Cortex-M4 has a 32-bit hardware divider (UDIV) but no 64-bit one, so a
+   plain `uint64_t / uint64_t` makes GCC emit a call to libgcc's
+   __aeabi_uldivmod. This bare-metal image otherwise links no support library
+   at all; implementing the divide here keeps libgcc out too.
+
+   Classic shift-subtract long division. Every shift is by a *constant* (1 or
+   63), so GCC inlines them — a variable 64-bit shift would itself pull in
+   __aeabi_llsl / __aeabi_llsr helpers, defeating the purpose. */
+static uint64_t udivmod64(uint64_t num, uint64_t den, uint64_t &rem)
+{
+    uint64_t q{0};
+    uint64_t r{0};
+    for (uint32_t i{0U}; i < 64U; i++) {
+        r = (r << 1) | (num >> 63);
+        num <<= 1;
+        q <<= 1;
+        if (r >= den) {
+            r -= den;
+            q |= 1U;
+        }
+    }
+    rem = r;
+    return q;
+}
+
+
 /* Print unsigned integer via semihosting. */
 static void _semihost_write_uint(uint32_t val)
 {
@@ -33,7 +61,8 @@ static void _semihost_write_uint(uint32_t val)
 static void _semihost_write_avg_ns(uint64_t total_cycles, uint32_t runs)
 {
     uint64_t divisor{(uint64_t)runs * kCpuFreq};
-    uint64_t ns{(total_cycles * 1000000000ULL + divisor / 2U) / divisor};
+    uint64_t rem{};
+    uint64_t ns{udivmod64(total_cycles * 1000000000ULL + divisor / 2U, divisor, rem)};
     _semihost_write_uint((uint32_t)ns);
     _semihost_write0(" ns");
 }
@@ -41,9 +70,10 @@ static void _semihost_write_avg_ns(uint64_t total_cycles, uint32_t runs)
 /* Print seconds with 3-digit millisecond precision via semihosting. */
 static void _semihost_write_seconds(uint64_t cycles)
 {
-    uint64_t sec{cycles / kCpuFreq};
-    uint64_t frac{cycles % kCpuFreq};
-    uint32_t ms{(uint32_t)((frac * 1000U + kCpuFreq / 2U) / kCpuFreq)};
+    uint64_t frac{};
+    uint64_t sec{udivmod64(cycles, kCpuFreq, frac)};
+    uint64_t ms_rem{};
+    uint32_t ms{(uint32_t)udivmod64(frac * 1000U + kCpuFreq / 2U, kCpuFreq, ms_rem)};
 
     _semihost_write_uint((uint32_t)sec);
     _semihost_write0(".");
