@@ -55,6 +55,7 @@ jobs:
           d_text=$((algo_text - base_text))
           d_data=$((algo_data - base_data))
           d_bss=$((algo_bss - base_bss))
+          d_total=$((d_text + d_data + d_bss))
 
           {
             echo "## Firmware size delta"
@@ -68,10 +69,10 @@ jobs:
             echo "| data    | ${base_data} | ${algo_data} | $(signed "$d_data") |"
             echo "| bss     | ${base_bss} | ${algo_bss} | $(signed "$d_bss") |"
             echo ""
-            echo "Code footprint (text delta): **$(signed "$d_text") bytes**"
+            echo "Total footprint (text + data + bss delta): **$(signed "$d_total") bytes**"
           } >> "$GITHUB_STEP_SUMMARY"
 
-          echo "text delta = ${d_text} bytes, data delta = ${d_data} bytes, bss delta = ${d_bss} bytes"
+          echo "text delta = ${d_text} bytes, data delta = ${d_data} bytes, bss delta = ${d_bss} bytes, total delta = ${d_total} bytes"
 
       - name: Upload firmware artifacts
         uses: actions/upload-artifact@v7
