@@ -219,10 +219,10 @@ Example output for the 1000‑nop throughput test (3 000 000 runs):
 --- start ---
 wrap 23.861 s
 runs 3000000
-dt = 16.853 s  avg = 5618 ns
+dt = 16.833 s  avg = 5611 ns
 ```
 
-At -O3 the effective frequency is 1000 nops / 5618 ns ≈ 178 MHz —
+At -O3 the effective frequency is 1000 nops / 5611 ns ≈ 178 MHz —
 close to the 180 MHz core clock. The remaining gap is loop-counter overhead
 that even -O3 cannot fully eliminate (3 M branches and increments).
 
