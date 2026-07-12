@@ -50,9 +50,8 @@ Reconnect the board afterwards.
 
 ```bash
 make clean        # remove build/
-make              # debug build (-O0) → build/firmware.bin, build/firmware.elf
-make debug        # same as make (explicit debug)
-make release      # optimized build (-O3)
+make release      # optimized build (-O3) → build/firmware.bin, build/firmware.elf
+                  # (make / make debug build unoptimized -O0 for stepping)
 ```
 
 By default `algo()` is empty, so a build measures only the benchmark loop's
@@ -65,10 +64,9 @@ purely as a working example. It is **not** compiled in unless you ask for it
 with `TEST_ALGO=1`, which defines `USE_TEST_ALGO` and makes `algo()` call it:
 
 ```bash
-make TEST_ALGO=1              # debug build (-O0) including the nop example
-make release TEST_ALGO=1      # optimized build (-O3) including the example
-make run_debug TEST_ALGO=1    # build -O0, flash and run the example
+make release TEST_ALGO=1      # optimized build (-O3) including the nop example
 make run_release TEST_ALGO=1  # build -O3, flash and run the example
+                              # (make / run_debug do the same at -O0)
 ```
 
 Every build prints the firmware size. Here is the empty baseline
@@ -76,7 +74,7 @@ Every build prints the firmware size. Here is the empty baseline
 
 ```
    text    data     bss     dec     hex filename
-   2036       4       4    2044     7fc build/firmware.elf
+   1392       4       4    1400     578 build/firmware.elf
 ```
 
 - `text` — code + read‑only data (FLASH)
@@ -93,11 +91,11 @@ For example, building the bundled nop example (`make release TEST_ALGO=1`):
 
 ```
    text    data     bss     dec     hex filename
-   4040       4       4    4048     fd0 build/firmware.elf
+   3400       4       4    3408     d50 build/firmware.elf
 ```
 
-The `text` grows from 2036 to 4040 bytes, so the 1000‑nop example costs
-**4040 − 2036 = 2004 bytes** of FLASH — the 1000 nops (2 bytes each = 2000 B)
+The `text` grows from 1392 to 3400 bytes, so the 1000‑nop example costs
+**3400 − 1392 = 2008 bytes** of FLASH — the 1000 nops (2 bytes each = 2000 B)
 plus the call/return glue around `algo_nop()`.
 
 The build uses `-ffunction-sections -fdata-sections` and link‑time garbage
