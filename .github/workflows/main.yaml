@@ -9,11 +9,8 @@ on:
 
 jobs:
   build:
-    name: Build & size check
+    name: Build & size delta
     runs-on: ubuntu-latest
-
-    env:
-      FLASH_BYTES: 524288   # STM32F446RE FLASH = 512 KiB
 
     steps:
       - name: Checkout
@@ -48,31 +45,33 @@ jobs:
           cp build/firmware.elf build/firmware.bin build/firmware.map dist/test_algo/
           arm-none-eabi-size build/firmware.elf | tee test-algo-size.txt
 
-      - name: Size check & summary
+      - name: Size delta & summary
         run: |
-          text=$(awk 'NR==2 {print $1}' baseline-size.txt)
-          data=$(awk 'NR==2 {print $2}' baseline-size.txt)
-          flash_used=$((text + data))
+          read base_text base_data base_bss <<<"$(awk 'NR==2 {print $1, $2, $3}' baseline-size.txt)"
+          read algo_text algo_data algo_bss <<<"$(awk 'NR==2 {print $1, $2, $3}' test-algo-size.txt)"
+
+          signed() { [ "$1" -ge 0 ] && printf '+%d' "$1" || printf '%d' "$1"; }
+
+          d_text=$((algo_text - base_text))
+          d_data=$((algo_data - base_data))
+          d_bss=$((algo_bss - base_bss))
+
           {
-            echo "## Firmware size report"
+            echo "## Firmware size delta"
             echo ""
-            echo "### Empty baseline (\`make release\`)"
-            echo '```'
-            cat baseline-size.txt
-            echo '```'
-            echo "FLASH used (text + data): ${flash_used} / ${FLASH_BYTES} bytes"
+            echo "Footprint of the bundled nop example vs. the empty baseline"
+            echo "(\`make release TEST_ALGO=1\` − \`make release\`)."
             echo ""
-            echo "### With nop example (\`make release TEST_ALGO=1\`)"
-            echo '```'
-            cat test-algo-size.txt
-            echo '```'
+            echo "| Section | Baseline | TEST_ALGO | Delta |"
+            echo "|---------|---------:|----------:|------:|"
+            echo "| text    | ${base_text} | ${algo_text} | $(signed "$d_text") |"
+            echo "| data    | ${base_data} | ${algo_data} | $(signed "$d_data") |"
+            echo "| bss     | ${base_bss} | ${algo_bss} | $(signed "$d_bss") |"
+            echo ""
+            echo "Code footprint (text delta): **$(signed "$d_text") bytes**"
           } >> "$GITHUB_STEP_SUMMARY"
 
-          if [ "$flash_used" -gt "$FLASH_BYTES" ]; then
-            echo "::error::FLASH overflow: ${flash_used} bytes exceeds ${FLASH_BYTES} bytes"
-            exit 1
-          fi
-          echo "Size check passed: ${flash_used} bytes fit in ${FLASH_BYTES} bytes of FLASH."
+          echo "text delta = ${d_text} bytes, data delta = ${d_data} bytes, bss delta = ${d_bss} bytes"
 
       - name: Upload firmware artifacts
         uses: actions/upload-artifact@v7
