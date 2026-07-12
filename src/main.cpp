@@ -58,7 +58,16 @@ static class AlgoRunner {
     uint32_t m_runs;
     void algo(void)
     {
+#ifdef USE_TEST_ALGO
         algo_nop();
+#else
+        /* No algorithm selected: an empty volatile asm is a compiler barrier
+           that the optimizer must preserve, so it cannot prove the loop body
+           empty and delete the whole `for` loop. Unlike a nop it emits *zero*
+           instructions, so it adds no cycles — the measured time then reflects
+           the pure loop overhead (counter increment, compare, branch) alone. */
+        __asm volatile("");
+#endif
     }
 public:
     AlgoRunner(uint32_t runs) : m_runs{runs} {}

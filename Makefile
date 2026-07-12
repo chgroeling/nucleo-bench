@@ -16,8 +16,15 @@ OBJ      = $(patsubst src/%.c,$(BUILD)/src/%.o,$(C_SRC)) \
 ARCH     = -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard
 SPECS    = -specs=nano.specs -specs=nosys.specs
 OPT      ?= -O0
+
+# Set TEST_ALGO=1 to activate the bundled test algorithm (default: off).
+TEST_ALGO ?= 0
+ifeq ($(TEST_ALGO),1)
+DEFS     += -DUSE_TEST_ALGO
+endif
+
 SHARED   = $(ARCH) $(SPECS) -nostartfiles $(OPT) -g3 -Wall -Wextra -Isrc \
-           -ffunction-sections -fdata-sections
+           -ffunction-sections -fdata-sections $(DEFS)
 
 CFLAGS   = $(SHARED) -std=c11
 CXXFLAGS = $(SHARED) -std=c++17 -fno-exceptions -fno-rtti

@@ -44,20 +44,6 @@ sudo udevadm trigger
 
 Reconnect the board afterwards.
 
-## Project layout
-
-| Path                     | Purpose                                           |
-|--------------------------|---------------------------------------------------|
-| `src/main.cpp`           | Entry point, output helpers, `AlgoRunner`         |
-| `src/algo_nop.cpp/hpp`   | 1000‑nop throughput test (CPI validation)         |
-| `src/semihost.c`         | `_semihost_write0` — SYS_WRITE0 via `bkpt #0xAB` |
-| `src/clock.c`            | PLL config to 180 MHz, DWT cycle‑counter helpers   |
-| `src/startup.c`          | Vector table, `Reset_Handler`, C++ static init    |
-| `linker/stm32f446re.ld`  | Linker script (512K FLASH, 128K RAM)              |
-| `Makefile`               | Build, debug, release, run targets                |
-| `openocd.cfg`            | OpenOCD config (ST-LINK/V2-1, SWD, semihosting)   |
-| `debug.gdb`              | GDB batch script for semihosting sessions         |
-
 ## Usage
 
 ### Build
@@ -69,11 +55,28 @@ make debug        # same as make (explicit debug)
 make release      # optimized build (-O3)
 ```
 
-`make` prints the size of the debug firmware:
+By default `algo()` is empty, so a build measures only the benchmark loop's
+own overhead. This is the intended starting point: you drop in your own
+algorithm (see [Bring your own algorithm](#bring-your-own-algorithm)) and
+compare against this empty baseline.
+
+The repo also ships one ready-made algorithm, `src/algo_nop.cpp` (1000 nops),
+purely as a working example. It is **not** compiled in unless you ask for it
+with `TEST_ALGO=1`, which defines `USE_TEST_ALGO` and makes `algo()` call it:
+
+```bash
+make TEST_ALGO=1              # debug build (-O0) including the nop example
+make release TEST_ALGO=1      # optimized build (-O3) including the example
+make run_debug TEST_ALGO=1    # build -O0, flash and run the example
+make run_release TEST_ALGO=1  # build -O3, flash and run the example
+```
+
+Every build prints the firmware size. Here is the empty baseline
+(`make release`, no algorithm selected):
 
 ```
    text    data     bss     dec     hex filename
-   4708       4       4    4716    126c build/firmware.elf
+   2476       4       4    2484     9b4 build/firmware.elf
 ```
 
 - `text` — code + read‑only data (FLASH)
@@ -81,12 +84,21 @@ make release      # optimized build (-O3)
 - `bss`  — zero‑initialized read/write data (RAM, zeroed at startup)
 - `dec` / `hex` — total (text + data + bss) in decimal / hex
 
-The STM32F446RE has 512 KiB FLASH and 128 KiB RAM. To measure the code
-size of your algorithm, do a baseline build with an empty `algo()` body,
-note the `text` value, then restore your algorithm and build again. The
-difference in the `text` column is your algorithm's code footprint.
-Changes in `data` or `bss` reflect global/static variables your algorithm
-introduces.
+The STM32F446RE has 512 KiB FLASH and 128 KiB RAM. To measure the code size
+of an algorithm, compare its build against the empty baseline above; the
+difference in the `text` column is the algorithm's code footprint. Changes in
+`data` or `bss` reflect global/static variables it introduces.
+
+For example, building the bundled nop example (`make release TEST_ALGO=1`):
+
+```
+   text    data     bss     dec     hex filename
+   4480       4       4    4488    1188 build/firmware.elf
+```
+
+The `text` grows from 2476 to 4480 bytes, so the 1000‑nop example costs
+**4480 − 2476 = 2004 bytes** of FLASH — the 1000 nops (2 bytes each = 2000 B)
+plus the call/return glue around `algo_nop()`.
 
 The build uses `-ffunction-sections -fdata-sections` and link‑time garbage
 collection (`--gc-sections`) so unreferenced code and data are stripped
@@ -95,9 +107,13 @@ algorithm actually pulls in.
 
 ### Run & measure
 
+Use `make run_release` for benchmarking — the `-O3` build reflects real
+algorithm performance. `make run_debug` (`-O0`, unoptimized) is optional and
+mainly useful for stepping through code:
+
 ```bash
-make run_debug       # build -O0, flash and run
-make run_release     # build -O3, flash and run
+make run_release     # build -O3, flash and run (use this for measurements)
+make run_debug       # build -O0, flash and run (optional, for debugging)
 ```
 
 **Terminal 1** — OpenOCD server (semihosting output lands here):
@@ -109,22 +125,16 @@ openocd -d1 -f openocd.cfg    # GDB on :3333, -d1 suppresses driver noise
 **Terminal 2** — build, flash and run in one step:
 
 ```bash
-make run_debug       # or: make run_release
+make run_release     # or, for debugging: make run_debug
 ```
 
 Connects GDB, flashes, resets and runs. Benchmark output prints in the
 OpenOCD terminal. When `main()` returns a breakpoint at `_exit_breakpoint`
 catches the exit, the target is reset and GDB quits.
 
-Example output for the 1000‑nop throughput test (3 000 000 runs):
+Example output for the 1000‑nop throughput test (3 000 000 runs):
 
 ```
-=== make run_debug (-O0 -g3) ===
---- start ---
-wrap 23.861 s
-runs 3000000
-dt = 17.567 s  avg = 5856 ns
-
 === make run_release (-O3 -g3) ===
 --- start ---
 wrap 23.861 s
@@ -136,7 +146,7 @@ At -O3 the effective frequency is 1000 nops / 5618 ns ≈ 178 MHz —
 close to the 180 MHz core clock. The remaining gap is loop-counter overhead
 that even -O3 cannot fully eliminate (3 M branches and increments).
 
-- `wrap` — DWT cycle counter wraparound limit (2³² cycles at 180 MHz)
+- `wrap` — DWT cycle counter wraparound limit (2**32 cycles at 180 MHz)
 - `runs` — repetition count (`g_runner(N)`)
 - `dt` — total elapsed time
 - `avg` — per-run average in nanoseconds
@@ -144,8 +154,19 @@ that even -O3 cannot fully eliminate (3 M branches and increments).
 ## Bring your own algorithm
 
 `src/algo_nop.cpp` is a test stub that lets you verify execution frequency
-(cycles-per-nop → effective CPI). To measure your own algorithm, add a new
-source file, update `src/main.cpp` to call it, and adjust `kBenchRuns` for
-the desired repetition count. No need to touch `algo_nop.cpp`.
+(cycles-per-nop → effective CPI). It is an example only and is deactivated by
+default; build with `make TEST_ALGO=1` to include it. To measure your own
+algorithm, add a new source file, update `src/main.cpp` to call it, and adjust
+`kBenchRuns` for the desired repetition count. No need to touch `algo_nop.cpp`.
+
+When no algorithm is selected, `algo()` contains a single empty
+`__asm volatile("")`. This is a compiler barrier: it emits **zero**
+instructions, yet counts as an observable side effect the optimizer must
+preserve. Without it, `-O3` would prove the loop body empty and delete the
+entire benchmark `for` loop (dead-code elimination), so the DWT delta would
+read ~0 ns and the harness would look broken. Because it generates no code, it
+adds no cycles — the measured time then reflects the pure loop overhead
+(counter increment, compare, branch) alone. A `nop` would work too, but it
+costs one real cycle per iteration and would skew that baseline.
 
 Zero dependencies beyond nano stdlib — everything else is bare metal.
