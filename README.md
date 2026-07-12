@@ -76,7 +76,7 @@ Every build prints the firmware size. Here is the empty baseline
 
 ```
    text    data     bss     dec     hex filename
-   2476       4       4    2484     9b4 build/firmware.elf
+   2036       4       4    2044     7fc build/firmware.elf
 ```
 
 - `text` — code + read‑only data (FLASH)
@@ -93,11 +93,11 @@ For example, building the bundled nop example (`make release TEST_ALGO=1`):
 
 ```
    text    data     bss     dec     hex filename
-   4480       4       4    4488    1188 build/firmware.elf
+   4040       4       4    4048     fd0 build/firmware.elf
 ```
 
-The `text` grows from 2476 to 4480 bytes, so the 1000‑nop example costs
-**4480 − 2476 = 2004 bytes** of FLASH — the 1000 nops (2 bytes each = 2000 B)
+The `text` grows from 2036 to 4040 bytes, so the 1000‑nop example costs
+**4040 − 2036 = 2004 bytes** of FLASH — the 1000 nops (2 bytes each = 2000 B)
 plus the call/return glue around `algo_nop()`.
 
 The build uses `-ffunction-sections -fdata-sections` and link‑time garbage
