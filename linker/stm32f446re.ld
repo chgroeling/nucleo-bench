@@ -12,8 +12,8 @@ _estack = ORIGIN(RAM) + LENGTH(RAM);
    allocates (malloc/free/new/delete); _sbrk hands out bytes from this region.
    These are link-time size guarantees — the linker errors if RAM can't hold
    .data + .bss + this heap + this stack. Tune to your algorithm's needs. */
-_Min_Heap_Size  = 0x2000;   /* 8 KiB heap  */
-_Min_Stack_Size = 0x1000;   /* 4 KiB stack */
+_Min_Heap_Size  = 0x19000;  /* 100 KiB heap */
+_Min_Stack_Size = 0x2800;   /* 10 KiB stack */
 
 SECTIONS
 {

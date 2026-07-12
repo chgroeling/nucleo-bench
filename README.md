@@ -148,8 +148,8 @@ appears in the baseline; it is all pulled in on demand by `--gc-sections`.
 How it is wired:
 
 - The linker script reserves a heap region after `.bss` (`_Min_Heap_Size`,
-  default 8 KiB) and a stack reservation (`_Min_Stack_Size`, default 4 KiB). No
-  section is emitted for them, so the reported `.bss` is unchanged — the
+  default 100 KiB) and a stack reservation (`_Min_Stack_Size`, default 10 KiB).
+  No section is emitted for them, so the reported `.bss` is unchanged — the
   reservation is enforced only by a link-time `ASSERT` that fails the build if
   RAM can't hold `.data + .bss + heap + stack`. Tune the two sizes at the top
   of `linker/stm32f446re.ld` to your algorithm.
