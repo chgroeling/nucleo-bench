@@ -9,7 +9,7 @@ BUILD    = build
 TARGET   = $(BUILD)/firmware
 
 C_SRC    = src/semihost.c src/startup.c src/clock.c
-CXX_SRC  = src/main.cpp src/algo_nop.cpp
+CXX_SRC  = src/main.cpp src/algo_nop.cpp src/heap.cpp
 OBJ      = $(patsubst src/%.c,$(BUILD)/src/%.o,$(C_SRC)) \
            $(patsubst src/%.cpp,$(BUILD)/src/%.o,$(CXX_SRC))
 

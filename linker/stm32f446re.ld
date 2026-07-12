@@ -8,6 +8,13 @@ MEMORY
 
 _estack = ORIGIN(RAM) + LENGTH(RAM);
 
+/* Heap and stack reservation. The heap is only ever used if your algorithm
+   allocates (malloc/free/new/delete); _sbrk hands out bytes from this region.
+   These are link-time size guarantees — the linker errors if RAM can't hold
+   .data + .bss + this heap + this stack. Tune to your algorithm's needs. */
+_Min_Heap_Size  = 0x2000;   /* 8 KiB heap  */
+_Min_Stack_Size = 0x1000;   /* 4 KiB stack */
+
 SECTIONS
 {
     .isr_vector :
@@ -68,4 +75,17 @@ SECTIONS
         . = ALIGN(4);
         _ebss = .;
     } > RAM
+
+    /* Heap grows up from _sheap (== _end) via _sbrk; the stack grows down from
+       _estack. No section is emitted here — that keeps the heap/stack out of
+       the reported .bss so the baseline size is unaffected. The ASSERT is a
+       pure link-time check that RAM can hold .data + .bss plus the requested
+       heap and stack; it costs zero bytes. */
+    . = ALIGN(8);
+    PROVIDE(_end = .);
+    PROVIDE(end = .);
+    _sheap = .;
+
+    ASSERT(_sheap + _Min_Heap_Size + _Min_Stack_Size <= _estack,
+           "RAM overflow: not enough room for heap + stack")
 }

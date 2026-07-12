@@ -18,6 +18,8 @@ assembly semihosting stub. Output is captured by OpenOCD / GDB, not a UART.
 |--------------------------|----------------------------------------------------------------|
 | `src/main.cpp`           | Entry point, semihosting output helpers, `AlgoRunner` bench loop |
 | `src/algo_nop.cpp/.hpp`  | 1000-nop throughput stub for CPI / frequency validation        |
+| `src/compiler.hpp`       | Zero-overhead optimizer barriers (do_not_optimize, clobber_memory, compiler_barrier) |
+| `src/heap.cpp`           | `_sbrk` + `operator new`/`delete` — heap support, GC'd out unless used |
 | `src/semihost.c`         | Semihosting stub `_semihost_write0` (SYS_WRITE0 via `bkpt #0xAB`) |
 | `src/clock.c`            | PLL config to 180 MHz (over-drive), DWT cycle-counter helpers   |
 | `src/startup.c`          | Vector table, `Reset_Handler`, `.data`/`.bss` init, C++ static init |

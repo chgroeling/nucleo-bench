@@ -138,6 +138,55 @@ function (say `memcpy` or `printf`), that function is linked from newlib-nano
 *then*, and its cost shows up in the `text` delta — you pay only for what you
 use, and you can see exactly what that is.
 
+### Heap allocation (malloc / free / new / delete)
+
+Algorithms that need dynamic memory can use `malloc`/`free` and C++
+`new`/`delete` — but **only if they actually allocate**. Nothing about the heap
+appears in the baseline; it is all pulled in on demand by `--gc-sections`.
+
+How it is wired:
+
+- The linker script reserves a heap region after `.bss` (`_Min_Heap_Size`,
+  default 8 KiB) and a stack reservation (`_Min_Stack_Size`, default 4 KiB). No
+  section is emitted for them, so the reported `.bss` is unchanged — the
+  reservation is enforced only by a link-time `ASSERT` that fails the build if
+  RAM can't hold `.data + .bss + heap + stack`. Tune the two sizes at the top
+  of `linker/stm32f446re.ld` to your algorithm.
+- `src/heap.cpp` supplies `_sbrk()` (the one platform hook newlib-nano's
+  allocator needs) and thin `operator new`/`delete` wrappers over
+  `malloc`/`free`. We reuse newlib-nano's small, well-tested allocator rather
+  than shipping our own.
+- Built with `-fno-exceptions`, so `operator new` returns `nullptr` on failure
+  instead of throwing `std::bad_alloc`. That keeps the C++ exception runtime
+  (libstdc++/libsupc++) out of the image entirely.
+
+The key property is that this costs **nothing until you use it**. Prove it with
+`nm`. In the empty baseline there is no allocator at all:
+
+```console
+$ arm-none-eabi-nm build/firmware.elf | grep -iE 'malloc|_sbrk|operator new'
+$          # → no output: stripped by --gc-sections
+```
+
+Add a single `new int[16]` / `delete[]` to your algorithm and rebuild, and the
+allocator is linked — `_sbrk`, `malloc`/`free`, and the C++ `operator new[]`
+(`_Znaj`) / `operator delete[]` (`_ZdaPv`) now appear, and `text` grows
+accordingly (≈ +670 bytes here, all of it newlib-nano's allocator):
+
+```console
+$ arm-none-eabi-nm build/firmware.elf | grep -iE 'malloc|_sbrk|_Zna|_Zda'
+08000188 T malloc
+08000198 T free
+080001f0 T _malloc_r
+080002f0 T _free_r
+08000790 T _sbrk
+080007bc T _Znaj          # operator new[]
+080007c0 T _ZdaPv         # operator delete[]
+```
+
+So the heap is available when an algorithm needs it, yet the libc dependency
+stays at zero for algorithms that don't allocate.
+
 ### Run & measure
 
 Use `make run_release` for benchmarking — the `-O3` build reflects real
