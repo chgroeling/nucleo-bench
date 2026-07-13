@@ -7,7 +7,7 @@
 A bare-metal benchmarking environment for STM32F446RE. I built this to
 measure compute time and code size of algorithms running directly on a
 Cortex-M4F — no OS, no HAL, no hidden overhead. If you need cycle-accurate
-timings of small embedded routines, this should save you the setup work.
+timings of embedded routines, this should save you the setup work.
 
 Output goes over ARM semihosting through the on-board ST-LINK/V2-1. You
 read the numbers in an OpenOCD terminal — no UART wiring required.

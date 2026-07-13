@@ -6,7 +6,7 @@ tags: []
 # Project
 
 `nucleo-bench` is a bare-metal benchmarking environment for the STM32 Nucleo-64
-(NUCLEO-F446RE, Cortex-M4F). It measures compute time and code size of small
+(NUCLEO-F446RE, Cortex-M4F). It measures compute time and code size of
 algorithms running directly on the MCU — no OS, no HAL, no libc I/O. Everything
 is bare metal: a hand-written vector table, a minimal `Reset_Handler`, C++ static
 init support, PLL clock bring-up to 180 MHz, DWT cycle-counter timing, and an
