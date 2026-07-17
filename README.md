@@ -123,6 +123,8 @@ call libgcc's `__aeabi_uldivmod`). Verify with `nm`:
 
 ```console
 $ arm-none-eabi-nm -C -n build/firmware.elf   # (weak ISR aliases omitted)
+00002800 A _Min_Stack_Size
+00019000 A _Min_Heap_Size
 08000000 R isr_vector
 08000188 T _semihost_write0
 08000194 T Default_Handler
@@ -137,7 +139,18 @@ $ arm-none-eabi-nm -C -n build/firmware.elf   # (weak ISR aliases omitted)
 0800034c t _semihost_write_seconds(unsigned long long)
 08000438 T main
 08000518 t _GLOBAL__sub_I_main
-...
+08000570 d __init_array_start
+08000570 d __preinit_array_end
+08000570 d __preinit_array_start
+08000574 d __init_array_end
+08000574 A _sidata
+20000000 D _edata
+20000000 B _sbss
+20000000 D _sdata
+20000000 b g_runner
+20000004 B _ebss
+20000008 B _sheap
+20020000 R _estack
 ```
 
 Every symbol is defined in this repo; there are no undefined (externally
