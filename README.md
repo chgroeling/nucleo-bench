@@ -12,6 +12,10 @@ timings of embedded routines, this should save you the setup work.
 Output goes over ARM semihosting through the on-board ST-LINK/V2-1. You
 read the numbers in an OpenOCD terminal — no UART wiring required.
 
+Background reading: [Freestanding is not a
+flag](https://www.christiangroeling.de/posts/2026-07-17-freestanding-is-not-a-flag/)
+— the reasoning behind this project.
+
 ## Hardware
 
 | What                | Which                           |
