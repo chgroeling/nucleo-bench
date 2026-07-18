@@ -20,7 +20,7 @@ assembly semihosting stub. Output is captured by OpenOCD / GDB, not a UART.
 | `src/algo_nop.cpp/.hpp`  | 1000-nop throughput stub for CPI / frequency validation        |
 | `src/algo_sprintf.cpp/.hpp` | newlib-nano `sprintf` benchmark (float/int/string/pointer formatting, linked with `-u _printf_float`) |
 | `src/compiler.hpp`       | Zero-overhead optimizer barriers (do_not_optimize, clobber_memory, compiler_barrier) |
-| `src/heap.cpp`           | C++ `operator new`/`delete` — GC'd out unless used   |
+| `src/new.cpp`           | C++ `operator new`/`delete` — GC'd out unless used   |
 | `src/syscalls.c`         | Newlib syscall stubs (`_sbrk`, `_write` → semihosting, rest fail cleanly), GC'd out unless used |
 | `src/semihost.c`         | Semihosting stub `_semihost_write0` (SYS_WRITE0 via `bkpt #0xAB`) |
 | `src/clock.c`            | PLL config to 180 MHz (over-drive), DWT cycle-counter helpers   |

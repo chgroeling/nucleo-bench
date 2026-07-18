@@ -11,7 +11,7 @@
    newlib-nano's printf is integer-only by default; the Makefile links
    ALGO=sprintf builds with `-u _printf_float` to force the float engine in.
    Float conversion (_dtoa_r) allocates via malloc, served by _sbrk from
-   heap.cpp — so this benchmark also drags in the allocator.
+   syscalls.c — so this benchmark also drags in the allocator.
 
    Optimizer guards (see compiler.hpp):
    - do_not_optimize(len) keeps the return value alive,

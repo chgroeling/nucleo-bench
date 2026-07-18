@@ -186,7 +186,7 @@ How it is wired:
   of `linker/stm32f446re.ld` to your algorithm.
 - `src/syscalls.c` supplies `_sbrk()` (the one platform hook newlib-nano's
   allocator needs).
-- `src/heap.cpp` supplies thin C++ `operator new`/`delete` wrappers over
+- `src/new.cpp` supplies thin C++ `operator new`/`delete` wrappers over
   `malloc`/`free`. We reuse newlib-nano's small, well-tested allocator rather
   than shipping our own.
 - Built with `-fno-exceptions`, so `operator new` returns `nullptr` on failure
