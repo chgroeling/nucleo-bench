@@ -18,7 +18,9 @@ assembly semihosting stub. Output is captured by OpenOCD / GDB, not a UART.
 |--------------------------|----------------------------------------------------------------|
 | `src/main.cpp`           | Entry point, semihosting output helpers, `AlgoRunner` bench loop |
 | `src/algo_nop.cpp/.hpp`  | 1000-nop throughput stub for CPI / frequency validation        |
-| `src/algo_sprintf.cpp/.hpp` | newlib-nano `sprintf` benchmark (float/int/string/pointer formatting, linked with `-u _printf_float`) |
+| `src/algo_sprintf.cpp/.hpp` | newlib-nano `sprintf` benchmark (float/int/string/hex formatting, linked with `-u _printf_float`) |
+| `src/algo_ffb.cpp/.hpp`  | `ffb::FixedFormatBuffer` benchmark — same format and output as `algo_sprintf`, allocation-free, no libc printf |
+| `src/ffb/fixed_format_buffer.h` | Vendored header-only [fixed_format_buffer](https://github.com/chgroeling/fixed_format_buffer) library |
 | `src/compiler.hpp`       | Zero-overhead optimizer barriers (do_not_optimize, clobber_memory, compiler_barrier) |
 | `src/new.cpp`           | C++ `operator new`/`delete` — GC'd out unless used   |
 | `src/syscalls.c`         | Newlib syscall stubs (`_sbrk`, `_write` → semihosting, rest fail cleanly), GC'd out unless used |
@@ -44,7 +46,8 @@ assembly semihosting stub. Output is captured by OpenOCD / GDB, not a UART.
   to seconds and per-run nanoseconds against the 180 MHz core clock.
 - **Benchmark loop**: the `AlgoRunner` (`g_runner`) calls `algo()` `kBenchRuns`
   times (default 3,000,000). `algo()` dispatches on the `ALGO` build variable
-  (`nop` → `algo_nop()`, `sprintf` → `algo_sprintf()`; default is an empty
+  (`nop` → `algo_nop()`, `sprintf` → `algo_sprintf()`, `ffb` → `algo_ffb()`;
+  default is an empty
   barrier-only baseline).
 - **Output**: helpers call `_semihost_write0()` which issues `bkpt #0xAB` with
   `SYS_WRITE0 (0x04)` to print via the host debugger.
@@ -93,7 +96,8 @@ make clean      # removes build/
 
 Select the benchmarked algorithm with the `ALGO` variable (make variable or
 environment): `ALGO=none` (default, empty baseline), `ALGO=nop`,
-`ALGO=sprintf` — e.g. `make release ALGO=sprintf`. Unknown values fail the
+`ALGO=sprintf`, `ALGO=ffb` — e.g. `make release ALGO=sprintf`. Unknown values
+fail the
 build.
 
 `make` prints the firmware size (`text` = FLASH code footprint). To measure an
@@ -124,7 +128,9 @@ cleanly (batch mode auto-confirms prompts via `set confirm off`).
 
 `src/algo_nop.cpp` (`ALGO=nop`) is a test stub for verifying execution
 frequency (cycles-per-nop → effective CPI); `src/algo_sprintf.cpp`
-(`ALGO=sprintf`) benchmarks newlib-nano's `sprintf`. To benchmark your own
+(`ALGO=sprintf`) benchmarks newlib-nano's `sprintf`; `src/algo_ffb.cpp`
+(`ALGO=ffb`) benchmarks the vendored header-only `ffb::FixedFormatBuffer` on
+the identical format string for a direct comparison. To benchmark your own
 algorithm, add a source file, update `src/main.cpp`'s `AlgoRunner::algo()` to
 call it, and adjust `kBenchRuns` for the desired repetition count. Zero
 dependencies beyond nano stdlib — everything else is bare metal.

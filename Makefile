@@ -9,7 +9,7 @@ BUILD    = build
 TARGET   = $(BUILD)/firmware
 
 C_SRC    = src/semihost.c src/startup.c src/clock.c src/syscalls.c
-CXX_SRC  = src/main.cpp src/algo_nop.cpp src/algo_sprintf.cpp src/new.cpp
+CXX_SRC  = src/main.cpp src/algo_nop.cpp src/algo_sprintf.cpp src/algo_ffb.cpp src/new.cpp
 OBJ      = $(patsubst src/%.c,$(BUILD)/src/%.o,$(C_SRC)) \
            $(patsubst src/%.cpp,$(BUILD)/src/%.o,$(CXX_SRC))
 
@@ -26,8 +26,10 @@ else ifeq ($(ALGO),sprintf)
 DEFS     += -DUSE_ALGO_SPRINTF
 # newlib-nano's printf is integer-only; force the float engine in for %f/%g.
 LD_ALGO  += -Wl,-u,_printf_float
+else ifeq ($(ALGO),ffb)
+DEFS     += -DUSE_ALGO_FFB
 else ifneq ($(ALGO),none)
-$(error unknown ALGO '$(ALGO)' - valid values: none, nop, sprintf)
+$(error unknown ALGO '$(ALGO)' - valid values: none, nop, sprintf, ffb)
 endif
 
 SHARED   = $(ARCH) $(SPECS) -nostartfiles $(OPT) -g3 -Wall -Wextra -Isrc \

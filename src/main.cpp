@@ -1,6 +1,7 @@
 /* Application entry: semihosting output helpers and DWT-based benchmark loop. */
 
 #include <stdint.h>
+#include "algo_ffb.hpp"
 #include "algo_nop.hpp"
 #include "algo_sprintf.hpp"
 #include "compiler.hpp"
@@ -8,9 +9,10 @@
 static constexpr uint64_t kCpuFreq{180000000ULL};
 
 /* Per-algorithm repetition count — keep kBenchRuns × per-run time under the
-   DWT wrap limit (2^32 cycles ≈ 23.8 s at 180 MHz). sprintf is orders of
-   magnitude slower than a nop, so it runs 10× fewer repetitions. */
-#if defined(USE_ALGO_SPRINTF)
+   DWT wrap limit (2^32 cycles ≈ 23.8 s at 180 MHz). The formatting benchmarks
+   (sprintf, ffb) are orders of magnitude slower than a nop, so they run fewer
+   repetitions. */
+#if defined(USE_ALGO_SPRINTF) || defined(USE_ALGO_FFB)
 static constexpr uint32_t kBenchRuns{100000U};
 #else
 static constexpr uint32_t kBenchRuns{3000000U};
@@ -102,6 +104,8 @@ static class AlgoRunner {
         algo_nop();
 #elif defined(USE_ALGO_SPRINTF)
         algo_sprintf();
+#elif defined(USE_ALGO_FFB)
+        algo_ffb();
 #else
         /* No algorithm selected (ALGO=none): compiler_barrier() is a zero-instruction
            compiler barrier (see compiler.hpp) so -O3 cannot prove the loop body

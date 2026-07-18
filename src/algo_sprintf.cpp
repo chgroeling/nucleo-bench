@@ -1,7 +1,12 @@
 /* sprintf formatting benchmark — measures newlib-nano's sprintf() on a mixed
-   float / integer / string / pointer / char format:
+   float / integer / string / hex / char format:
 
-       "%0.10f:%04d:%+g:%s:%p:%c:%%\n"
+       "%0.6f:%04d:%+f:%s:%#x:%c:%%\n"
+
+   The format is deliberately identical to algo_ffb's (same specifiers, same
+   arguments, byte-identical output) so ALGO=sprintf vs ALGO=ffb is a direct
+   head-to-head — it sticks to ffb's supported subset (no %g/%p, precision
+   capped at 6).
 
    Unlike the nop stub this deliberately pulls real libc code (newlib-nano's
    vfprintf machinery) into the image, so it exercises both compute time and
@@ -29,8 +34,8 @@ void algo_sprintf(void)
 {
     static char buf[64];
 
-    int len{sprintf(buf, "%0.10f:%04d:%+g:%s:%p:%c:%%\n",
-                    1.234, 42, 3.13, "str", (void *)1000, (int)'X')};
+    int len{sprintf(buf, "%0.6f:%04d:%+f:%s:%#x:%c:%%\n",
+                    1.234, 42, 3.13, "str", 1000U, (int)'X')};
     do_not_optimize(len);
     clobber_memory();
 }
