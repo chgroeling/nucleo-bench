@@ -180,12 +180,13 @@ How it is wired:
 
 - The linker script reserves a heap region after `.bss` (`_Min_Heap_Size`,
   default 100 KiB) and a stack reservation (`_Min_Stack_Size`, default 10 KiB).
-  No section is emitted for them, so the reported `.bss` is unchanged - the
+  No section is emitted for them, so the reported `.bss` is unchanged — the
   reservation is enforced only by a link-time `ASSERT` that fails the build if
   RAM can't hold `.data + .bss + heap + stack`. Tune the two sizes at the top
   of `linker/stm32f446re.ld` to your algorithm.
-- `src/heap.cpp` supplies `_sbrk()` (the one platform hook newlib-nano's
-  allocator needs) and thin `operator new`/`delete` wrappers over
+- `src/syscalls.c` supplies `_sbrk()` (the one platform hook newlib-nano's
+  allocator needs).
+- `src/heap.cpp` supplies thin C++ `operator new`/`delete` wrappers over
   `malloc`/`free`. We reuse newlib-nano's small, well-tested allocator rather
   than shipping our own.
 - Built with `-fno-exceptions`, so `operator new` returns `nullptr` on failure
@@ -197,11 +198,11 @@ The key property is that this costs **nothing until you use it**. Prove it with
 
 ```console
 $ arm-none-eabi-nm build/firmware.elf | grep -iE 'malloc|_sbrk|operator new'
-$          # → no output: stripped by --gc-sections
+$          # -> no output: stripped by --gc-sections
 ```
 
 Add a single `new int[16]` / `delete[]` to your algorithm and rebuild, and the
-allocator is linked - `_sbrk`, `malloc`/`free`, and the C++ `operator new[]`
+allocator is linked — `_sbrk`, `malloc`/`free`, and the C++ `operator new[]`
 (`_Znaj`) / `operator delete[]` (`_ZdaPv`) now appear, and `text` grows
 accordingly (≈ +670 bytes here, all of it newlib-nano's allocator):
 

@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - FPU enabled in `Reset_Handler` (`SCB_CPACR` grants CP10/CP11 access)
   before any code runs — the whole image (including newlib) is built
   hard-float, and without this the first VFP instruction raises UsageFault.
+- `_sbrk` moved from `heap.cpp` to `syscalls.c` alongside the other newlib
+  syscall stubs; `heap.cpp` now holds only C++ `operator new`/`delete`.
 
 ### Changed
 
