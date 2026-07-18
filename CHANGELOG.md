@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-07-18
+
 ### Added
 
 - `ffb` benchmark (`src/algo_ffb.cpp/.hpp`) exercising the vendored
@@ -43,5 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial release.
 
-[Unreleased]: https://github.com/chgroeling/nucleo-bench/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/chgroeling/nucleo-bench/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/chgroeling/nucleo-bench/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/chgroeling/nucleo-bench/releases/tag/v1.0.0
