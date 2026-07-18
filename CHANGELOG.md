@@ -9,8 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ffb` benchmark (`src/algo_ffb.cpp/.hpp`) exercising the vendored
+  header-only [fixed_format_buffer](https://github.com/chgroeling/fixed_format_buffer)
+  library (`src/ffb/fixed_format_buffer.h`, v0.3.1) — allocation-free, no
+  libc printf; select with `make release ALGO=ffb`.
 - `sprintf` benchmark example (`src/algo_sprintf.cpp/.hpp`) exercising
-  newlib-nano's `sprintf` (float/int/string/pointer formatting, linked with
+  newlib-nano's `sprintf` (float/int/string/hex formatting, linked with
   `-u _printf_float`); select with `make release ALGO=sprintf`.
 - Minimal newlib syscall implementations (`src/syscalls.c`): `_write` routes
   to the semihosting console, the rest return clean character-device
@@ -27,7 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Algorithm selection now uses the `ALGO` make variable
-  (`ALGO=none|nop|sprintf`, default `none`), replacing `TEST_ALGO=1`.
+  (`ALGO=none|nop|sprintf|ffb`, default `none`), replacing `TEST_ALGO=1`.
+- `sprintf` and `ffb` benchmarks share the byte-identical format
+  `"%0.6f:%04d:%+f:%s:%#x:%c:%%\n"` (ffb's supported subset: no `%g`/`%p`,
+  precision capped at 6) for a direct time and code-size comparison.
 - `_sbrk` moved from `heap.cpp` to `syscalls.c` alongside the other newlib
   syscall stubs; `heap.cpp` renamed to `new.cpp` (now holds only C++
   `operator new`/`delete`).

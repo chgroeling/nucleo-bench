@@ -70,11 +70,13 @@ defines `USE_ALGO_<NAME>` and makes `algo()` call the chosen routine:
 |-----------|------------------------|---------------------------------------------------|
 | `none`    | -                      | empty baseline (pure loop overhead)               |
 | `nop`     | `src/algo_nop.cpp`     | 1000 nops - CPI / clock-frequency validation      |
-| `sprintf` | `src/algo_sprintf.cpp` | newlib-nano `sprintf` (float/int/string/pointer formatting) |
+| `sprintf` | `src/algo_sprintf.cpp` | newlib-nano `sprintf` (float/int/string/hex formatting) |
+| `ffb`     | `src/algo_ffb.cpp`     | [fixed_format_buffer](https://github.com/chgroeling/fixed_format_buffer) on the same format - allocation-free, no libc printf |
 
 ```bash
 make release ALGO=nop         # optimized build (-O3) including the nop example
 make release ALGO=sprintf     # optimized build (-O3) including the sprintf test
+make release ALGO=ffb         # optimized build (-O3) including the ffb test
                               # (make / make debug do the same at -O0)
 ```
 
@@ -168,7 +170,11 @@ function (say `memcpy` or `printf`), that function is linked from newlib-nano
 *then*, and its cost shows up in the `text` delta - you pay only for what you
 use, and you can see exactly what that is. The bundled `ALGO=sprintf` example
 demonstrates exactly this: it pulls newlib-nano's `sprintf` machinery into the
-image, and the `text` delta against the baseline is its honest footprint.
+image, and the `text` delta against the baseline is its honest footprint. The
+bundled `ALGO=ffb` example is its counterpoint: the vendored header-only
+[fixed_format_buffer](https://github.com/chgroeling/fixed_format_buffer)
+library formats the byte-identical string without libc's printf machinery -
+build both and compare `text` and `avg` head-to-head.
 
 ### Heap allocation (malloc / free / new / delete)
 
@@ -250,6 +256,7 @@ openocd -d1 -f openocd.cfg    # GDB on :3333, -d1 suppresses driver noise
 make run_release               # empty baseline
 make run_release ALGO=nop      # bundled nop example
 make run_release ALGO=sprintf  # bundled sprintf test
+make run_release ALGO=ffb      # bundled ffb test
 ```
 
 Connects GDB, flashes, resets and runs. Benchmark output prints in the
@@ -298,9 +305,13 @@ that even -O3 cannot fully eliminate (3 M branches and increments).
 default; build with `make ALGO=nop` to include it. `src/algo_sprintf.cpp`
 (build with `make ALGO=sprintf`) is a second example that exercises a real
 libc routine - newlib-nano's `sprintf` - including the code-size cost of
-linking it. To measure your own algorithm, add a new source file, update
-`src/main.cpp` to call it, and adjust `kBenchRuns` for the desired repetition
-count. No need to touch the bundled examples.
+linking it. `src/algo_ffb.cpp` (build with `make ALGO=ffb`) formats the same
+string with the vendored header-only `ffb::FixedFormatBuffer`
+(`src/ffb/fixed_format_buffer.h`) - both produce byte-identical output, so
+their time and `text` deltas compare directly. To measure your own algorithm,
+add a new source file, update `src/main.cpp` to call it, and adjust
+`kBenchRuns` for the desired repetition count. No need to touch the bundled
+examples.
 
 ### Keeping your algorithm alive under -O3
 
