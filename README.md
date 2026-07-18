@@ -6,11 +6,11 @@
 
 A bare-metal benchmarking environment for STM32F446RE. I built this to
 measure compute time and code size of algorithms running directly on a
-Cortex-M4F — no OS, no HAL, no hidden overhead. If you need cycle-accurate
+Cortex-M4F - no OS, no HAL, no hidden overhead. If you need cycle-accurate
 timings of embedded routines, this should save you the setup work.
 
 Output goes over ARM semihosting through the on-board ST-LINK/V2-1. You
-read the numbers in an OpenOCD terminal — no UART wiring required.
+read the numbers in an OpenOCD terminal - no UART wiring required.
 
 ## Hardware
 
@@ -63,13 +63,13 @@ algorithm (see [Bring your own algorithm](#bring-your-own-algorithm)) and
 compare against this empty baseline.
 
 The repo also ships ready-made algorithms, selected at build time via the
-`ALGO` make variable (default: `none` — the empty baseline). The selection
+`ALGO` make variable (default: `none` - the empty baseline). The selection
 defines `USE_ALGO_<NAME>` and makes `algo()` call the chosen routine:
 
 | `ALGO=`   | Source                 | What it measures                                  |
 |-----------|------------------------|---------------------------------------------------|
-| `none`    | —                      | empty baseline (pure loop overhead)               |
-| `nop`     | `src/algo_nop.cpp`     | 1000 nops — CPI / clock-frequency validation      |
+| `none`    | -                      | empty baseline (pure loop overhead)               |
+| `nop`     | `src/algo_nop.cpp`     | 1000 nops - CPI / clock-frequency validation      |
 | `sprintf` | `src/algo_sprintf.cpp` | newlib-nano `sprintf` (float/int/string/pointer formatting) |
 
 ```bash
@@ -78,7 +78,7 @@ make release ALGO=sprintf     # optimized build (-O3) including the sprintf test
                               # (make / make debug do the same at -O0)
 ```
 
-`ALGO=...` works the same way on the run targets — see
+`ALGO=...` works the same way on the run targets - see
 [Run & measure](#run--measure).
 
 Every build prints the firmware size. Here is the empty baseline
@@ -89,10 +89,10 @@ Every build prints the firmware size. Here is the empty baseline
    1580       4       4    1588     634 build/firmware.elf
 ```
 
-- `text` — code + read‑only data (FLASH)
-- `data` — initialized read/write data (RAM, copied from FLASH at startup)
-- `bss`  — zero‑initialized read/write data (RAM, zeroed at startup)
-- `dec` / `hex` — total (text + data + bss) in decimal / hex
+- `text` - code + read‑only data (FLASH)
+- `data` - initialized read/write data (RAM, copied from FLASH at startup)
+- `bss`  - zero‑initialized read/write data (RAM, zeroed at startup)
+- `dec` / `hex` - total (text + data + bss) in decimal / hex
 
 The STM32F446RE has 512 KiB FLASH and 128 KiB RAM. To measure the code size
 of an algorithm, compare its build against the empty baseline above; the
@@ -107,17 +107,17 @@ For example, building the bundled nop example (`make release ALGO=nop`):
 ```
 
 The `text` grows from 1580 to 3588 bytes, so the 1000‑nop example costs
-**3588 − 1580 = 2008 bytes** of FLASH — the 1000 nops (2 bytes each = 2000 B)
+**3588 − 1580 = 2008 bytes** of FLASH - the 1000 nops (2 bytes each = 2000 B)
 plus the call/return glue around `algo_nop()`.
 
 The build uses `-ffunction-sections -fdata-sections` and link‑time garbage
 collection (`--gc-sections`) so unreferenced code and data are stripped
-from the final binary — the measured footprint reflects only what your
+from the final binary - the measured footprint reflects only what your
 algorithm actually pulls in.
 
 ### No library dependencies
 
-The image is fully freestanding: it links **no** support library — not libc
+The image is fully freestanding: it links **no** support library - not libc
 (newlib-nano), not libgcc. `nano.specs` puts newlib-nano on the linker search
 path, but nothing is actually pulled from it. Startup uses private
 `_memcpy` / `_memset` (so the compiler's loop-idiom pass doesn't drag in libc),
@@ -165,7 +165,7 @@ Every symbol is defined in this repo; there are no undefined (externally
 provided) symbols. Because nothing is linked implicitly, the size delta you
 measure for an algorithm is honest end-to-end: if your code calls a libc
 function (say `memcpy` or `printf`), that function is linked from newlib-nano
-*then*, and its cost shows up in the `text` delta — you pay only for what you
+*then*, and its cost shows up in the `text` delta - you pay only for what you
 use, and you can see exactly what that is. The bundled `ALGO=sprintf` example
 demonstrates exactly this: it pulls newlib-nano's `sprintf` machinery into the
 image, and the `text` delta against the baseline is its honest footprint.
@@ -173,14 +173,14 @@ image, and the `text` delta against the baseline is its honest footprint.
 ### Heap allocation (malloc / free / new / delete)
 
 Algorithms that need dynamic memory can use `malloc`/`free` and C++
-`new`/`delete` — but **only if they actually allocate**. Nothing about the heap
+`new`/`delete` - but **only if they actually allocate**. Nothing about the heap
 appears in the baseline; it is all pulled in on demand by `--gc-sections`.
 
 How it is wired:
 
 - The linker script reserves a heap region after `.bss` (`_Min_Heap_Size`,
   default 100 KiB) and a stack reservation (`_Min_Stack_Size`, default 10 KiB).
-  No section is emitted for them, so the reported `.bss` is unchanged — the
+  No section is emitted for them, so the reported `.bss` is unchanged - the
   reservation is enforced only by a link-time `ASSERT` that fails the build if
   RAM can't hold `.data + .bss + heap + stack`. Tune the two sizes at the top
   of `linker/stm32f446re.ld` to your algorithm.
@@ -201,7 +201,7 @@ $          # → no output: stripped by --gc-sections
 ```
 
 Add a single `new int[16]` / `delete[]` to your algorithm and rebuild, and the
-allocator is linked — `_sbrk`, `malloc`/`free`, and the C++ `operator new[]`
+allocator is linked - `_sbrk`, `malloc`/`free`, and the C++ `operator new[]`
 (`_Znaj`) / `operator delete[]` (`_ZdaPv`) now appear, and `text` grows
 accordingly (≈ +670 bytes here, all of it newlib-nano's allocator):
 
@@ -221,7 +221,7 @@ stays at zero for algorithms that don't allocate.
 
 ### Newlib syscall stubs
 
-Some newlib code paths expect POSIX-style syscalls — stdio's FILE glue
+Some newlib code paths expect POSIX-style syscalls - stdio's FILE glue
 references `_read`/`_write`/`_close`/`_lseek`/`_fstat`/`_isatty`, and `abort()`
 raises a signal via `_kill`/`_getpid`. `src/syscalls.c` provides minimal
 implementations, so such code links cleanly instead of pulling libnosys's
@@ -229,21 +229,21 @@ stubs and their `_write is not implemented and will always fail` linker
 warnings. `_write()` routes to the semihosting console (so `printf`/`puts`
 output lands in the OpenOCD terminal); the others return sane character-device
 defaults. Like the heap, all of it is stripped by `--gc-sections` unless
-something actually references it — the empty baseline is unaffected.
+something actually references it - the empty baseline is unaffected.
 
 ### Run & measure
 
 Benchmarking uses two terminals: one runs the OpenOCD server, the other builds,
-flashes and runs the firmware. Use the `-O3` `run_release` target — it reflects
+flashes and runs the firmware. Use the `-O3` `run_release` target - it reflects
 real algorithm performance (`run_debug` builds `-O0` for stepping).
 
-**Terminal 1** — OpenOCD server (semihosting output lands here):
+**Terminal 1** - OpenOCD server (semihosting output lands here):
 
 ```bash
 openocd -d1 -f openocd.cfg    # GDB on :3333, -d1 suppresses driver noise
 ```
 
-**Terminal 2** — build, flash and run in one step:
+**Terminal 2** - build, flash and run in one step:
 
 ```bash
 make run_release               # empty baseline
@@ -264,7 +264,7 @@ via semihosting and stops on a `bkpt`, e.g.
 ```
 
 (`MemManage`, `BusFault` and `UsageFault` are enabled at startup so a fault
-lands in its own handler instead of escalating to `HardFault` — the message
+lands in its own handler instead of escalating to `HardFault` - the message
 names the actual cause. The handlers are `weak`; your algorithm may override
 them.)
 
@@ -278,17 +278,17 @@ runs 3000000
 dt = 16.833 s  avg = 5611 ns
 ```
 
-At -O3 the effective frequency is 1000 nops / 5611 ns ≈ 178 MHz —
+At -O3 the effective frequency is 1000 nops / 5611 ns ≈ 178 MHz -
 close to the 180 MHz core clock. The remaining gap is loop-counter overhead
 that even -O3 cannot fully eliminate (3 M branches and increments).
 
-- `wrap` — DWT cycle counter wraparound limit (2**32 cycles at 180 MHz). The
+- `wrap` - DWT cycle counter wraparound limit (2**32 cycles at 180 MHz). The
   total measured time (`dt`) must **never** exceed this: the 32-bit cycle
   counter silently wraps past it, making the reading wrong. Keep `kBenchRuns` ×
   per-run time under `wrap`; if you approach it, lower `kBenchRuns`.
-- `runs` — repetition count (`g_runner(N)`)
-- `dt` — total elapsed time
-- `avg` — per-run average in nanoseconds
+- `runs` - repetition count (`g_runner(N)`)
+- `dt` - total elapsed time
+- `avg` - per-run average in nanoseconds
 
 ## Bring your own algorithm
 
@@ -296,7 +296,7 @@ that even -O3 cannot fully eliminate (3 M branches and increments).
 (cycles-per-nop → effective CPI). It is an example only and is deactivated by
 default; build with `make ALGO=nop` to include it. `src/algo_sprintf.cpp`
 (build with `make ALGO=sprintf`) is a second example that exercises a real
-libc routine — newlib-nano's `sprintf` — including the code-size cost of
+libc routine - newlib-nano's `sprintf` - including the code-size cost of
 linking it. To measure your own algorithm, add a new source file, update
 `src/main.cpp` to call it, and adjust `kBenchRuns` for the desired repetition
 count. No need to touch the bundled examples.
@@ -304,11 +304,11 @@ count. No need to touch the bundled examples.
 ### Keeping your algorithm alive under -O3
 
 If an algorithm's result is never observed, `-O3` deletes the computation as
-dead code, or hoists a loop-invariant call out of the loop — so you end up
+dead code, or hoists a loop-invariant call out of the loop - so you end up
 timing nothing. `compiler.hpp` provides three zero-overhead barriers; two of
 them, described here, keep your algorithm alive (the third, `compiler_barrier()`,
-is for the empty baseline — see [below](#the-empty-baseline)). All emit **zero**
-instructions — they only constrain the optimizer, so they don't distort the
+is for the empty baseline - see [below](#the-empty-baseline)). All emit **zero**
+instructions - they only constrain the optimizer, so they don't distort the
 measured cycles.
 
 `do_not_optimize(value)` forces `value` into a register/memory as a side
@@ -326,7 +326,7 @@ void algo(void)
 ```
 
 `clobber_memory()` tells the compiler: "assume every byte of memory may have
-just been read and written here." That single assumption has two effects — it
+just been read and written here." That single assumption has two effects - it
 must finish all pending writes before this point (so they can't be optimized
 away), and it must re-read any value it had kept in a register afterwards (since
 memory might have changed). In short, it forces all memory writes to really
@@ -356,16 +356,16 @@ When no algorithm is selected, `algo()` calls `compiler_barrier()` from
 `compiler.hpp`, which wraps a single empty `__asm volatile("")`. It emits **zero**
 instructions, yet counts as an observable side effect the optimizer must
 preserve. Placing it in a code path stops the compiler from proving that path
-has no effect and deleting it — here, the empty benchmark loop body. Without
+has no effect and deleting it - here, the empty benchmark loop body. Without
 it, `-O3` would delete the entire `for` loop (dead-code elimination), so the
 DWT delta would read ~0 ns and the harness would look broken. Because it
-generates no code, it adds no cycles — the measured time then reflects the pure
+generates no code, it adds no cycles - the measured time then reflects the pure
 loop overhead (counter increment, compare, branch) alone.
 
 ## Contributing
 
 Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the
-(lightweight) process. The one hard rule: keep the image freestanding — no new
+(lightweight) process. The one hard rule: keep the image freestanding - no new
 dependencies, no change to the empty baseline.
 
 ## License
