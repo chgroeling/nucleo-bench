@@ -2,10 +2,19 @@
 
 #include <stdint.h>
 #include "algo_nop.hpp"
+#include "algo_sprintf.hpp"
 #include "compiler.hpp"
 
 static constexpr uint64_t kCpuFreq{180000000ULL};
+
+/* Per-algorithm repetition count — keep kBenchRuns × per-run time under the
+   DWT wrap limit (2^32 cycles ≈ 23.8 s at 180 MHz). sprintf is orders of
+   magnitude slower than a nop, so it runs 10× fewer repetitions. */
+#if defined(USE_ALGO_SPRINTF)
+static constexpr uint32_t kBenchRuns{100000U};
+#else
 static constexpr uint32_t kBenchRuns{3000000U};
+#endif
 
 extern "C" {
 void _semihost_write0(const char *s);
@@ -86,13 +95,15 @@ static void _semihost_write_seconds(uint64_t cycles)
 
 /* Benchmark runner — calls algo() N times in a tight loop. */
 static class AlgoRunner {
-    uint32_t m_runs;
+    uint32_t m_runs{0U};
     void algo(void)
     {
-#ifdef USE_TEST_ALGO
+#if defined(USE_ALGO_NOP)
         algo_nop();
+#elif defined(USE_ALGO_SPRINTF)
+        algo_sprintf();
 #else
-        /* No algorithm selected: compiler_barrier() is a zero-instruction
+        /* No algorithm selected (ALGO=none): compiler_barrier() is a zero-instruction
            compiler barrier (see compiler.hpp) so -O3 cannot prove the loop body
            empty and delete the whole `for` loop. It adds no cycles, so the
            measured time reflects the pure loop overhead alone.
@@ -125,7 +136,6 @@ int main(void)
     _semihost_write0("\n");
 
     _dwt_init();
-
     _dwt_zero();
 
     g_runner.run();

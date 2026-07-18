@@ -19,7 +19,8 @@ welcome and the process is deliberately lightweight.
 3. Make sure the firmware still builds clean before pushing:
    ```bash
    make release                 # empty baseline
-   make release TEST_ALGO=1     # bundled nop example
+   make release ALGO=nop        # bundled nop example
+   make release ALGO=sprintf    # bundled sprintf example
    ```
    CI runs these same builds and reports the firmware size.
 4. Add an entry under the `## [Unreleased]` section of
@@ -39,7 +40,7 @@ with **zero hidden overhead**. Please keep that intact:
   `-fno-rtti`), warnings-clean under `-Wall -Wextra`. Follow the naming and
   formatting already in `src/`.
 - **The `algo()` slot is for the caller.** Add example algorithms as separate
-  files gated behind a build flag (like `TEST_ALGO`) rather than wiring them in
-  by default.
+  files gated behind a build flag (like `ALGO=nop` / `ALGO=sprintf`) rather
+  than wiring them in by default.
 
 That's it — thanks for contributing!

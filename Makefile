@@ -8,8 +8,8 @@ SIZE     = arm-none-eabi-size
 BUILD    = build
 TARGET   = $(BUILD)/firmware
 
-C_SRC    = src/semihost.c src/startup.c src/clock.c
-CXX_SRC  = src/main.cpp src/algo_nop.cpp src/heap.cpp
+C_SRC    = src/semihost.c src/startup.c src/clock.c src/syscalls.c
+CXX_SRC  = src/main.cpp src/algo_nop.cpp src/algo_sprintf.cpp src/heap.cpp
 OBJ      = $(patsubst src/%.c,$(BUILD)/src/%.o,$(C_SRC)) \
            $(patsubst src/%.cpp,$(BUILD)/src/%.o,$(CXX_SRC))
 
@@ -17,10 +17,17 @@ ARCH     = -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard
 SPECS    = -specs=nano.specs -specs=nosys.specs
 OPT      ?= -O0
 
-# Set TEST_ALGO=1 to activate the bundled test algorithm (default: off).
-TEST_ALGO ?= 0
-ifeq ($(TEST_ALGO),1)
-DEFS     += -DUSE_TEST_ALGO
+# Select the benchmarked algorithm (default: none — empty baseline loop).
+# Example: make release ALGO=sprintf
+ALGO     ?= none
+ifeq ($(ALGO),nop)
+DEFS     += -DUSE_ALGO_NOP
+else ifeq ($(ALGO),sprintf)
+DEFS     += -DUSE_ALGO_SPRINTF
+# newlib-nano's printf is integer-only; force the float engine in for %f/%g.
+LD_ALGO  += -Wl,-u,_printf_float
+else ifneq ($(ALGO),none)
+$(error unknown ALGO '$(ALGO)' - valid values: none, nop, sprintf)
 endif
 
 SHARED   = $(ARCH) $(SPECS) -nostartfiles $(OPT) -g3 -Wall -Wextra -Isrc \
@@ -31,6 +38,7 @@ CXXFLAGS = $(SHARED) -std=c++17 -fno-exceptions -fno-rtti
 
 LDFLAGS  = -T linker/stm32f446re.ld
 LDFLAGS += -Wl,-Map=$(TARGET).map,--cref,--gc-sections
+LDFLAGS += $(LD_ALGO)
 
 .PHONY: all debug release run_debug run_release clean
 

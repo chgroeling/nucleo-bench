@@ -62,16 +62,23 @@ own overhead. This is the intended starting point: you drop in your own
 algorithm (see [Bring your own algorithm](#bring-your-own-algorithm)) and
 compare against this empty baseline.
 
-The repo also ships one ready-made algorithm, `src/algo_nop.cpp` (1000 nops),
-purely as a working example. It is **not** compiled in unless you ask for it
-with `TEST_ALGO=1`, which defines `USE_TEST_ALGO` and makes `algo()` call it:
+The repo also ships ready-made algorithms, selected at build time via the
+`ALGO` make variable (default: `none` — the empty baseline). The selection
+defines `USE_ALGO_<NAME>` and makes `algo()` call the chosen routine:
+
+| `ALGO=`   | Source                 | What it measures                                  |
+|-----------|------------------------|---------------------------------------------------|
+| `none`    | —                      | empty baseline (pure loop overhead)               |
+| `nop`     | `src/algo_nop.cpp`     | 1000 nops — CPI / clock-frequency validation      |
+| `sprintf` | `src/algo_sprintf.cpp` | newlib-nano `sprintf` (float/int/string/pointer formatting) |
 
 ```bash
-make release TEST_ALGO=1      # optimized build (-O3) including the nop example
+make release ALGO=nop         # optimized build (-O3) including the nop example
+make release ALGO=sprintf     # optimized build (-O3) including the sprintf test
                               # (make / make debug do the same at -O0)
 ```
 
-`TEST_ALGO=1` works the same way on the run targets — see
+`ALGO=...` works the same way on the run targets — see
 [Run & measure](#run--measure).
 
 Every build prints the firmware size. Here is the empty baseline
@@ -79,7 +86,7 @@ Every build prints the firmware size. Here is the empty baseline
 
 ```
    text    data     bss     dec     hex filename
-   1392       4       4    1400     578 build/firmware.elf
+   1580       4       4    1588     634 build/firmware.elf
 ```
 
 - `text` — code + read‑only data (FLASH)
@@ -92,15 +99,15 @@ of an algorithm, compare its build against the empty baseline above; the
 difference in the `text` column is the algorithm's code footprint. Changes in
 `data` or `bss` reflect global/static variables it introduces.
 
-For example, building the bundled nop example (`make release TEST_ALGO=1`):
+For example, building the bundled nop example (`make release ALGO=nop`):
 
 ```
    text    data     bss     dec     hex filename
-   3400       4       4    3408     d50 build/firmware.elf
+   3588       4       4    3596     e0c build/firmware.elf
 ```
 
-The `text` grows from 1392 to 3400 bytes, so the 1000‑nop example costs
-**3400 − 1392 = 2008 bytes** of FLASH — the 1000 nops (2 bytes each = 2000 B)
+The `text` grows from 1580 to 3588 bytes, so the 1000‑nop example costs
+**3588 − 1580 = 2008 bytes** of FLASH — the 1000 nops (2 bytes each = 2000 B)
 plus the call/return glue around `algo_nop()`.
 
 The build uses `-ffunction-sections -fdata-sections` and link‑time garbage
@@ -124,22 +131,27 @@ $ arm-none-eabi-nm -C -n build/firmware.elf   # (weak ISR aliases omitted)
 08000000 R isr_vector
 08000188 T _semihost_write0
 08000194 T Default_Handler
-08000198 t _memset.constprop.0
-080001b4 t _memcpy.constprop.0
-080001d8 T Reset_Handler
-08000240 T _sysclk_180mhz
-080002d0 T _dwt_init
-080002f4 T _dwt_cyccnt
-08000300 T _dwt_zero
-0800030c t _semihost_write_uint(unsigned long)
-0800034c t _semihost_write_seconds(unsigned long long)
-08000438 T main
-08000518 t _GLOBAL__sub_I_main
-08000570 d __init_array_start
-08000570 d __preinit_array_end
-08000570 d __preinit_array_start
-08000574 d __init_array_end
-08000574 A _sidata
+08000198 t _fault_report
+080001bc W HardFault_Handler
+080001c8 W MemManage_Handler
+080001d4 W BusFault_Handler
+080001e0 W UsageFault_Handler
+080001ec t _memset.constprop.0
+08000208 t _memcpy.constprop.0
+0800022c T Reset_Handler
+080002b8 T _sysclk_180mhz
+08000348 T _dwt_init
+0800036c T _dwt_cyccnt
+08000378 T _dwt_zero
+08000384 t _semihost_write_uint(unsigned long)
+080003c4 t _semihost_write_seconds(unsigned long long)
+080004b0 T main
+08000590 t _GLOBAL__sub_I_main
+0800062c d __init_array_start
+0800062c d __preinit_array_end
+0800062c d __preinit_array_start
+08000630 d __init_array_end
+08000630 A _sidata
 20000000 D _edata
 20000000 B _sbss
 20000000 D _sdata
@@ -154,7 +166,9 @@ provided) symbols. Because nothing is linked implicitly, the size delta you
 measure for an algorithm is honest end-to-end: if your code calls a libc
 function (say `memcpy` or `printf`), that function is linked from newlib-nano
 *then*, and its cost shows up in the `text` delta — you pay only for what you
-use, and you can see exactly what that is.
+use, and you can see exactly what that is. The bundled `ALGO=sprintf` example
+demonstrates exactly this: it pulls newlib-nano's `sprintf` machinery into the
+image, and the `text` delta against the baseline is its honest footprint.
 
 ### Heap allocation (malloc / free / new / delete)
 
@@ -205,6 +219,18 @@ $ arm-none-eabi-nm build/firmware.elf | grep -iE 'malloc|_sbrk|_Zna|_Zda'
 So the heap is available when an algorithm needs it, yet the libc dependency
 stays at zero for algorithms that don't allocate.
 
+### Newlib syscall stubs
+
+Some newlib code paths expect POSIX-style syscalls — stdio's FILE glue
+references `_read`/`_write`/`_close`/`_lseek`/`_fstat`/`_isatty`, and `abort()`
+raises a signal via `_kill`/`_getpid`. `src/syscalls.c` provides minimal
+implementations, so such code links cleanly instead of pulling libnosys's
+stubs and their `_write is not implemented and will always fail` linker
+warnings. `_write()` routes to the semihosting console (so `printf`/`puts`
+output lands in the OpenOCD terminal); the others return sane character-device
+defaults. Like the heap, all of it is stripped by `--gc-sections` unless
+something actually references it — the empty baseline is unaffected.
+
 ### Run & measure
 
 Benchmarking uses two terminals: one runs the OpenOCD server, the other builds,
@@ -220,13 +246,27 @@ openocd -d1 -f openocd.cfg    # GDB on :3333, -d1 suppresses driver noise
 **Terminal 2** — build, flash and run in one step:
 
 ```bash
-make run_release              # empty baseline
-make run_release TEST_ALGO=1  # include the bundled nop example
+make run_release               # empty baseline
+make run_release ALGO=nop      # bundled nop example
+make run_release ALGO=sprintf  # bundled sprintf test
 ```
 
 Connects GDB, flashes, resets and runs. Benchmark output prints in the
 OpenOCD terminal. When `main()` returns a breakpoint at `_exit_breakpoint`
 catches the exit, the target is reset and GDB quits.
+
+If the firmware crashes instead, the fault handlers report it before halting:
+each of `HardFault` / `MemManage` / `BusFault` / `UsageFault` prints its name
+via semihosting and stops on a `bkpt`, e.g.
+
+```
+*** fault: BusFault ***
+```
+
+(`MemManage`, `BusFault` and `UsageFault` are enabled at startup so a fault
+lands in its own handler instead of escalating to `HardFault` — the message
+names the actual cause. The handlers are `weak`; your algorithm may override
+them.)
 
 Example output for the 1000‑nop throughput test (3 000 000 runs):
 
@@ -254,9 +294,12 @@ that even -O3 cannot fully eliminate (3 M branches and increments).
 
 `src/algo_nop.cpp` is a test stub that lets you verify execution frequency
 (cycles-per-nop → effective CPI). It is an example only and is deactivated by
-default; build with `make TEST_ALGO=1` to include it. To measure your own
-algorithm, add a new source file, update `src/main.cpp` to call it, and adjust
-`kBenchRuns` for the desired repetition count. No need to touch `algo_nop.cpp`.
+default; build with `make ALGO=nop` to include it. `src/algo_sprintf.cpp`
+(build with `make ALGO=sprintf`) is a second example that exercises a real
+libc routine — newlib-nano's `sprintf` — including the code-size cost of
+linking it. To measure your own algorithm, add a new source file, update
+`src/main.cpp` to call it, and adjust `kBenchRuns` for the desired repetition
+count. No need to touch the bundled examples.
 
 ### Keeping your algorithm alive under -O3
 

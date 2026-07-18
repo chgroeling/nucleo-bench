@@ -1,10 +1,18 @@
-/* Vector table, Reset_Handler, data/bss init, weak ISR aliases. */
+/* Vector table, Reset_Handler, data/bss init, fault reporting, weak ISR aliases. */
 
 #include <stddef.h>
 
 extern unsigned int _estack;
 extern int main(void);
 extern void _sysclk_180mhz(void);
+void _semihost_write0(const char *s);
+
+/* SCB System Handler Control and State Register — enables the separate
+   MemManage / BusFault / UsageFault exceptions. */
+#define SCB_SHCSR (*(volatile unsigned int *)0xE000ED24UL)
+
+/* SCB Coprocessor Access Control Register — CP10/CP11 gate the FPU. */
+#define SCB_CPACR (*(volatile unsigned int *)0xE000ED88UL)
 
 /* Hand-rolled copy / fill for startup.
 
@@ -52,21 +60,41 @@ void Default_Handler(void)
     while (1) {}
 }
 
+/* Fault reporting: print which fault fired via semihosting, then halt on a
+   breakpoint so the debugger shows where execution stopped. The `while (1)`
+   keeps the core parked if execution is resumed anyway.
+
+   Semihosting works here even inside a fault handler: with the debugger
+   attached, `bkpt #0xAB` halts the core regardless of exception priority and
+   OpenOCD services the request on the host. */
+static void _fault_report(const char *name)
+{
+    _semihost_write0("\n*** fault: ");
+    _semihost_write0(name);
+    _semihost_write0(" ***\n");
+    __asm volatile ("bkpt #0");
+    while (1) {}
+}
+
+/* Weak, so an algorithm can still install its own handlers. MemManage,
+   BusFault and UsageFault are unmasked in Reset_Handler (SCB_SHCSR);
+   otherwise every fault would escalate to HardFault and the report could
+   not name the actual cause. */
+__attribute__((weak)) void HardFault_Handler(void)  { _fault_report("HardFault"); }
+__attribute__((weak)) void MemManage_Handler(void)  { _fault_report("MemManage"); }
+__attribute__((weak)) void BusFault_Handler(void)   { _fault_report("BusFault"); }
+__attribute__((weak)) void UsageFault_Handler(void) { _fault_report("UsageFault"); }
+
 static void _exit_breakpoint(void)
 {
     __asm volatile ("bkpt #0");
 }
 
 void NMI_Handler(void)                    __attribute__((weak, alias("Default_Handler")));
-void HardFault_Handler(void)              __attribute__((weak, alias("Default_Handler")));
-void MemManage_Handler(void)              __attribute__((weak, alias("Default_Handler")));
-void BusFault_Handler(void)               __attribute__((weak, alias("Default_Handler")));
-void UsageFault_Handler(void)             __attribute__((weak, alias("Default_Handler")));
 void SVC_Handler(void)                    __attribute__((weak, alias("Default_Handler")));
 void DebugMon_Handler(void)               __attribute__((weak, alias("Default_Handler")));
 void PendSV_Handler(void)                 __attribute__((weak, alias("Default_Handler")));
 void SysTick_Handler(void)                __attribute__((weak, alias("Default_Handler")));
-
 void WWDG_IRQHandler(void)                __attribute__((weak, alias("Default_Handler")));
 void PVD_IRQHandler(void)                 __attribute__((weak, alias("Default_Handler")));
 void TAMP_STAMP_IRQHandler(void)          __attribute__((weak, alias("Default_Handler")));
@@ -225,10 +253,25 @@ void Reset_Handler(void)
     extern unsigned int _sidata, _sdata, _edata;
     extern unsigned int _sbss, _ebss;
 
+    /* Enable the FPU before anything else runs: grant full access to CP10 /
+       CP11 (the FPU) in CPACR. The whole image is built hard-float
+       (-mfloat-abi=hard -mfpu=fpv4-sp-d16) — including newlib, whose float
+       paths (e.g. printf's %f engine) execute VFP instructions. CP10/CP11
+       are *disabled* after reset, so without this the first VFP instruction
+       raises a UsageFault (NOCP). The dsb/isb pair makes the new coprocessor
+       access rights take effect before any subsequent instruction. */
+    SCB_CPACR |= (0x3U << 20) | (0x3U << 22);
+    __asm volatile ("dsb");
+    __asm volatile ("isb");
+
     _memcpy(&_sdata, &_sidata, (size_t)((char *)&_edata - (char *)&_sdata));
     _memset(&_sbss, 0, (size_t)((char *)&_ebss - (char *)&_sbss));
 
     _sysclk_180mhz();
+
+    /* Split out MemManage / BusFault / UsageFault from HardFault so the
+       fault report can name the actual fault (see _fault_report above). */
+    SCB_SHCSR |= (1U << 16) | (1U << 17) | (1U << 18);
 
     {
         init_fn *p;

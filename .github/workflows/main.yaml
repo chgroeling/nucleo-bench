@@ -36,43 +36,52 @@ jobs:
           cp build/firmware.elf build/firmware.bin build/firmware.map dist/baseline/
           arm-none-eabi-size build/firmware.elf | tee baseline-size.txt
 
-      - name: Build nop example (make release TEST_ALGO=1)
-        run: make release TEST_ALGO=1
+      - name: Build nop example (make release ALGO=nop)
+        run: make release ALGO=nop
 
-      - name: Record TEST_ALGO size
+      - name: Record ALGO=nop size
         run: |
-          mkdir -p dist/test_algo
-          cp build/firmware.elf build/firmware.bin build/firmware.map dist/test_algo/
-          arm-none-eabi-size build/firmware.elf | tee test-algo-size.txt
+          mkdir -p dist/algo_nop
+          cp build/firmware.elf build/firmware.bin build/firmware.map dist/algo_nop/
+          arm-none-eabi-size build/firmware.elf | tee algo-nop-size.txt
+
+      - name: Build sprintf example (make release ALGO=sprintf)
+        run: make release ALGO=sprintf
+
+      - name: Record ALGO=sprintf size
+        run: |
+          mkdir -p dist/algo_sprintf
+          cp build/firmware.elf build/firmware.bin build/firmware.map dist/algo_sprintf/
+          arm-none-eabi-size build/firmware.elf | tee algo-sprintf-size.txt
 
       - name: Size delta & summary
         run: |
           read base_text base_data base_bss <<<"$(awk 'NR==2 {print $1, $2, $3}' baseline-size.txt)"
-          read algo_text algo_data algo_bss <<<"$(awk 'NR==2 {print $1, $2, $3}' test-algo-size.txt)"
+          read nop_text nop_data nop_bss <<<"$(awk 'NR==2 {print $1, $2, $3}' algo-nop-size.txt)"
+          read spf_text spf_data spf_bss <<<"$(awk 'NR==2 {print $1, $2, $3}' algo-sprintf-size.txt)"
 
           signed() { [ "$1" -ge 0 ] && printf '+%d' "$1" || printf '%d' "$1"; }
 
-          d_text=$((algo_text - base_text))
-          d_data=$((algo_data - base_data))
-          d_bss=$((algo_bss - base_bss))
-          d_total=$((d_text + d_data + d_bss))
+          nop_total=$(( (nop_text + nop_data + nop_bss) - (base_text + base_data + base_bss) ))
+          spf_total=$(( (spf_text + spf_data + spf_bss) - (base_text + base_data + base_bss) ))
 
           {
             echo "## Firmware size delta"
             echo ""
-            echo "Footprint of the bundled nop example vs. the empty baseline"
-            echo "(\`make release TEST_ALGO=1\` − \`make release\`)."
+            echo "Footprint of the bundled examples vs. the empty baseline"
+            echo "(\`make release ALGO=<name>\` − \`make release\`)."
             echo ""
-            echo "| Section | Baseline | TEST_ALGO | Delta |"
-            echo "|---------|---------:|----------:|------:|"
-            echo "| text    | ${base_text} | ${algo_text} | $(signed "$d_text") |"
-            echo "| data    | ${base_data} | ${algo_data} | $(signed "$d_data") |"
-            echo "| bss     | ${base_bss} | ${algo_bss} | $(signed "$d_bss") |"
+            echo "| Section | Baseline | ALGO=nop | Delta | ALGO=sprintf | Delta |"
+            echo "|---------|---------:|---------:|------:|-------------:|------:|"
+            echo "| text    | ${base_text} | ${nop_text} | $(signed $((nop_text - base_text))) | ${spf_text} | $(signed $((spf_text - base_text))) |"
+            echo "| data    | ${base_data} | ${nop_data} | $(signed $((nop_data - base_data))) | ${spf_data} | $(signed $((spf_data - base_data))) |"
+            echo "| bss     | ${base_bss} | ${nop_bss} | $(signed $((nop_bss - base_bss))) | ${spf_bss} | $(signed $((spf_bss - base_bss))) |"
             echo ""
-            echo "Total footprint (text + data + bss delta): **$(signed "$d_total") bytes**"
+            echo "Total footprint (text + data + bss delta): nop **$(signed "$nop_total") bytes**, sprintf **$(signed "$spf_total") bytes**"
           } >> "$GITHUB_STEP_SUMMARY"
 
-          echo "text delta = ${d_text} bytes, data delta = ${d_data} bytes, bss delta = ${d_bss} bytes, total delta = ${d_total} bytes"
+          echo "nop: text delta = $((nop_text - base_text)) bytes, total delta = ${nop_total} bytes"
+          echo "sprintf: text delta = $((spf_text - base_text)) bytes, total delta = ${spf_total} bytes"
 
       - name: Upload firmware artifacts
         uses: actions/upload-artifact@v7
